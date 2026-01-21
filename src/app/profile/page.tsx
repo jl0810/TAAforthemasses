@@ -1,8 +1,11 @@
 import React from "react";
 import { UserCircle } from "lucide-react";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
+import { getUserPreferences } from "@/app/actions/user";
 
-export default function ProfilePage() {
+export default async function ProfilePage() {
+  const preferences = await getUserPreferences();
+
   return (
     <div className="max-w-4xl mx-auto space-y-10 pb-20">
       <section className="flex items-center gap-6">
@@ -16,15 +19,15 @@ export default function ProfilePage() {
         </div>
         <div>
           <h1 className="text-3xl font-black font-outfit text-white">
-            Jeff Lawson
+            User Profile
           </h1>
           <p className="text-white/40 text-sm">
-            Pro Strategist • Member since Jan 2026
+            Manage your strategy preferences
           </p>
         </div>
       </section>
 
-      <ProfileSettings />
+      <ProfileSettings initialConfig={preferences} />
     </div>
   );
 }

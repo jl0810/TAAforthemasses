@@ -29,20 +29,36 @@ export interface MarketSignal {
   history: SignalHistory[];
 }
 
-const IVY_5 = [
-  { symbol: "VTI", name: "US Stocks" },
-  { symbol: "VEA", name: "Intl Stocks" },
-  { symbol: "BND", name: "US Bonds" },
-  { symbol: "VNQ", name: "Real Estate" },
-  { symbol: "GSG", name: "Commodities" },
+import { getUserPreferences } from "@/app/actions/user";
+
+// ... keep existing imports ...
+
+// ... keep SignalHistory and MarketSignal interfaces ...
+
+const DEFAULT_IVY_5 = [
+  { id: "usStocks", symbol: "VTI", name: "US Stocks" },
+  { id: "intlStocks", symbol: "VEA", name: "Intl Stocks" },
+  { id: "usBonds", symbol: "BND", name: "US Bonds" },
+  { id: "realEstate", symbol: "VNQ", name: "Real Estate" },
+  { id: "commodities", symbol: "GSG", name: "Commodities" },
 ];
 
 export async function getMarketSignals(
   maType: "SMA" | "EMA" = "SMA",
 ): Promise<MarketSignal[]> {
   try {
+    const preferences = await getUserPreferences();
+
+    // Map preferences to asset list
+    const assets = DEFAULT_IVY_5.map((asset) => ({
+      ...asset,
+      symbol:
+        preferences.tickers[asset.id as keyof typeof preferences.tickers] ||
+        asset.symbol,
+    }));
+
     const signals = await Promise.all(
-      IVY_5.map(async (asset) => {
+      assets.map(async (asset) => {
         // Fetch ~26 months of daily data to ensure we have 10 months for MA seeding + 12 months of history
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - 26);
@@ -124,7 +140,7 @@ export async function getMarketSignals(
   } catch (error) {
     console.error("Failed to fetch market signals:", error);
     // Return mock data for demo if API fails or key is missing
-    return IVY_5.map((asset) => ({
+    return DEFAULT_IVY_5.map((asset) => ({
       symbol: asset.symbol,
       name: `Mock ${asset.name}`,
       price: 100,

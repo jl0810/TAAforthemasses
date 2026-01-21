@@ -8,31 +8,81 @@
  * The arithmetic mean of the last n monthly closing prices.
  */
 /**
- * Moving Average calculation (SMA or EMA)
+ * Checks if there are enough prices to calculate the moving average.
+ */
+function hasEnoughData(prices: number[], n: number): boolean {
+  return prices.length >= n;
+}
+
+/**
+ * Calculates the Unified Moving Average (SMA or EMA).
+ *
+ * @rules BR-001 Signal Generation Logic
+ * @userStory US-003 SMA/EMA Strategy Toggle
+ *
+ * @param prices - Array of prices (sorted oldest to newest)
+ * @param type - "SMA" or "EMA"
+ * @param n - Period (default: 10)
+ * @returns The calculated moving average value
  */
 export function calculateMovingAverage(
   prices: number[],
   type: "SMA" | "EMA",
   n: number = 10,
 ): number {
-  if (prices.length < n) return 0;
+  if (!hasEnoughData(prices, n)) return 0;
+
   if (type === "SMA") {
-    const window = prices.slice(-n);
-    return window.reduce((a, b) => a + b, 0) / n;
+    return calculateSMA(prices, n);
   } else {
-    // For EMA, we use the standard calculation
-    // Note: For high accuracy, EMA usually needs more history than 'n' to stabilize
-    const k = 2 / (n + 1);
-    let ema = prices[0];
-    for (let i = 1; i < prices.length; i++) {
-      ema = prices[i] * k + ema * (1 - k);
-    }
-    return ema;
+    return calculateEMA(prices, n);
   }
 }
 
 /**
- * Determines the action (Buy, Sell, Hold, Stay Cash) based on price/trend crossing
+ * Calculates the Simple Moving Average (SMA).
+ *
+ * @rules BR-001 Signal Generation Logic (SMA)
+ * @param prices - Array of prices
+ * @param n - Period (default: 10)
+ */
+export function calculateSMA(prices: number[], n: number = 10): number {
+  if (!hasEnoughData(prices, n)) return 0;
+  const window = prices.slice(-n);
+  return window.reduce((a, b) => a + b, 0) / n;
+}
+
+/**
+ * Calculates the Exponential Moving Average (EMA).
+ *
+ * @rules BR-001 Signal Generation Logic (EMA)
+ * @param prices - Array of prices
+ * @param n - Period (default: 10)
+ */
+export function calculateEMA(prices: number[], n: number = 10): number {
+  if (!hasEnoughData(prices, n)) return 0;
+
+  // For EMA, we use the standard calculation
+  const k = 2 / (n + 1);
+  let ema = prices[0]; // Start with first available price
+
+  for (let i = 1; i < prices.length; i++) {
+    ema = prices[i] * k + ema * (1 - k);
+  }
+  return ema;
+}
+
+/**
+ * Determines the action (Buy, Sell, Hold, Stay Cash) based on price/trend crossing.
+ *
+ * @rules BR-002 Trading Actions
+ * @userStory US-002 Historical Signal Analysis
+ *
+ * @param currentPrice - Current month's price
+ * @param currentTrend - Current month's trend value
+ * @param prevPrice - Previous month's price
+ * @param prevTrend - Previous month's trend value
+ * @returns "Buy" | "Sell" | "Hold" | "Stay Cash"
  */
 export function getSignalAction(
   currentPrice: number,
@@ -50,14 +100,19 @@ export function getSignalAction(
 }
 
 /**
- * Safety Buffer Calculation
+ * Safety Buffer Calculation.
+ *
+ * @rules BR-001 Signal Generation Logic (Safety Buffer)
+ * @param currentPrice - The current asset price
+ * @param movingAverage - The calculated trend (MA)
+ * @returns Percentage buffer (positive = Risk-On, negative = Risk-Off)
  */
 export function calculateSafetyBuffer(
   currentPrice: number,
   movingAverage: number,
 ): number {
   if (movingAverage === 0) return 0;
-  return (currentPrice / movingAverage - 1) * 100;
+  return ((currentPrice - movingAverage) / movingAverage) * 100;
 }
 
 /**
