@@ -9,7 +9,7 @@ RUN if [ -z "$GITHUB_TOKEN" ]; then exit 1; fi
 RUN echo "@jl0810:registry=https://npm.pkg.github.com" > .npmrc && \
     echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
 COPY package.json package-lock.json ./
-RUN npm install --omit=dev --legacy-peer-deps
+RUN npm install --omit=dev --legacy-peer-deps --ignore-scripts
 
 # BUILDER
 FROM base AS builder
