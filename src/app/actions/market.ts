@@ -72,104 +72,125 @@ export async function getMarketSignals(
 
   const signals = await Promise.all(
     assets.map(async (asset) => {
-      // 1. Query historical data from database (26 months back for MA seeding + 12 month history)
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 26);
+      try {
+        // 1. Query historical data from database (26 months back for MA seeding + 12 month history)
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 26);
 
-      const historicalData = await db
-        .select({
-          date: marketPrices.date,
-          adjClose: marketPrices.adjClose,
-        })
-        .from(marketPrices)
-        .where(
-          and(
-            eq(marketPrices.symbol, asset.symbol),
-            gte(marketPrices.date, startDate),
-          ),
-        )
-        .orderBy(desc(marketPrices.date));
-
-      if (historicalData.length < 11) {
-        throw new Error(
-          `Insufficient historical data for ${asset.symbol}. Found ${historicalData.length} records, need at least 11.`,
-        );
-      }
-
-      // Reverse to chronological order
-      const rawPrices = historicalData.reverse();
-
-      // 2. Fetch today's spot price from Tiingo (just 1 day)
-      const today = new Date().toISOString().split("T")[0];
-      const spotData = await fetchHistoricalPrices(asset.symbol, {
-        startDate: today,
-      });
-
-      const currentPrice =
-        spotData.length > 0
-          ? spotData[spotData.length - 1].adjClose
-          : rawPrices[rawPrices.length - 1].adjClose;
-
-      // 3. Calculate month-end prices
-      const monthEnds = getMonthEndPrices(rawPrices);
-
-      if (monthEnds.length < 11) {
-        throw new Error(`Insufficient month-end data for ${asset.symbol}`);
-      }
-
-      const history: SignalHistory[] = [];
-
-      // Generate 12 months of history
-      for (let i = 0; i < 12; i++) {
-        const index = monthEnds.length - 1 - (11 - i);
-        if (index < 9) continue; // Need at least 10 preceding months for first MA
-
-        const sliceForMA = monthEnds.slice(0, index + 1);
-        const monthPrice = monthEnds[index].adjClose;
-        const monthTrend = calculateMovingAverage(
-          sliceForMA.map((p) => p.adjClose),
-          maType,
-          10,
+        console.log(
+          `[getMarketSignals] Querying ${asset.symbol} from ${startDate.toISOString()}`,
         );
 
-        // Get prev for action logic
-        const prevPrice = monthEnds[index - 1].adjClose;
-        const prevTrend = calculateMovingAverage(
-          monthEnds.slice(0, index).map((p) => p.adjClose),
-          maType,
-          10,
+        const historicalData = await db
+          .select({
+            date: marketPrices.date,
+            adjClose: marketPrices.adjClose,
+          })
+          .from(marketPrices)
+          .where(
+            and(
+              eq(marketPrices.symbol, asset.symbol),
+              gte(marketPrices.date, startDate),
+            ),
+          )
+          .orderBy(desc(marketPrices.date));
+
+        console.log(
+          `[getMarketSignals] Found ${historicalData.length} records for ${asset.symbol}`,
         );
 
-        history.push({
-          month: new Date(monthEnds[index].date).toLocaleDateString("en-US", {
-            month: "short",
-            year: "2-digit",
-          }),
-          price: monthPrice,
-          trend: monthTrend,
-          status: monthPrice > monthTrend ? "Risk-On" : "Risk-Off",
-          action: getSignalAction(monthPrice, monthTrend, prevPrice, prevTrend),
+        if (historicalData.length < 11) {
+          throw new Error(
+            `Insufficient historical data for ${asset.symbol}. Found ${historicalData.length} records, need at least 11.`,
+          );
+        }
+
+        // Reverse to chronological order
+        const rawPrices = historicalData.reverse();
+
+        // 2. Fetch today's spot price from Tiingo (just 1 day)
+        const today = new Date().toISOString().split("T")[0];
+        const spotData = await fetchHistoricalPrices(asset.symbol, {
+          startDate: today,
         });
+
+        const currentPrice =
+          spotData.length > 0
+            ? spotData[spotData.length - 1].adjClose
+            : rawPrices[rawPrices.length - 1].adjClose;
+
+        // 3. Calculate month-end prices
+        const monthEnds = getMonthEndPrices(rawPrices);
+
+        if (monthEnds.length < 11) {
+          throw new Error(`Insufficient month-end data for ${asset.symbol}`);
+        }
+
+        const history: SignalHistory[] = [];
+
+        // Generate 12 months of history
+        for (let i = 0; i < 12; i++) {
+          const index = monthEnds.length - 1 - (11 - i);
+          if (index < 9) continue; // Need at least 10 preceding months for first MA
+
+          const sliceForMA = monthEnds.slice(0, index + 1);
+          const monthPrice = monthEnds[index].adjClose;
+          const monthTrend = calculateMovingAverage(
+            sliceForMA.map((p) => p.adjClose),
+            maType,
+            10,
+          );
+
+          // Get prev for action logic
+          const prevPrice = monthEnds[index - 1].adjClose;
+          const prevTrend = calculateMovingAverage(
+            monthEnds.slice(0, index).map((p) => p.adjClose),
+            maType,
+            10,
+          );
+
+          history.push({
+            month: new Date(monthEnds[index].date).toLocaleDateString("en-US", {
+              month: "short",
+              year: "2-digit",
+            }),
+            price: monthPrice,
+            trend: monthTrend,
+            status: monthPrice > monthTrend ? "Risk-On" : "Risk-Off",
+            action: getSignalAction(
+              monthPrice,
+              monthTrend,
+              prevPrice,
+              prevTrend,
+            ),
+          });
+        }
+
+        // Current Metrics
+        const currentTrend = calculateMovingAverage(
+          monthEnds.map((p) => p.adjClose),
+          maType,
+          10,
+        );
+        const buffer = calculateSafetyBuffer(currentPrice, currentTrend);
+
+        return {
+          symbol: asset.symbol,
+          name: asset.name,
+          price: currentPrice,
+          trend: currentTrend,
+          buffer: buffer,
+          status: buffer > 0 ? "Risk-On" : "Risk-Off",
+          lastUpdated: new Date().toISOString(),
+          history: history,
+        } as MarketSignal;
+      } catch (error) {
+        console.error(
+          `[getMarketSignals] Error processing ${asset.symbol}:`,
+          error,
+        );
+        throw error;
       }
-
-      // Current Metrics
-      const currentTrend = calculateMovingAverage(
-        monthEnds.map((p) => p.adjClose),
-        maType,
-        10,
-      );
-      const buffer = calculateSafetyBuffer(currentPrice, currentTrend);
-
-      return {
-        symbol: asset.symbol,
-        name: asset.name,
-        price: currentPrice,
-        trend: currentTrend,
-        buffer: buffer,
-        status: buffer > 0 ? "Risk-On" : "Risk-Off",
-        lastUpdated: new Date().toISOString(),
-        history: history,
-      } as MarketSignal;
     }),
   );
 
