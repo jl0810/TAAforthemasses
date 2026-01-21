@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { marketPrices } from "@/db/schema/tables";
 import { fetchHistoricalPrices } from "@/lib/integrations/tiingo-client";
 import { sql } from "drizzle-orm";
-import { NextResponse } from "next/server";
 
 // 30 ETF Universe (Broad Assets + Sectors)
 const UNIVERSE = [
@@ -44,45 +43,35 @@ const UNIVERSE = [
   "SHY",
 ];
 
-// Allow 5 minute execution time (Vercel/Next.js default is often 10s-60s)
-export const maxDuration = 300;
-
-export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
+async function main() {
   console.log(
-    `🚀 Starting scheduled price update for ${UNIVERSE.length} assets...`,
+    `🚀 Starting nightly price update for ${UNIVERSE.length} assets...`,
   );
-
   const apiKey = process.env.TIINGO_API_KEY;
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "TIINGO_API_KEY missing" },
-      { status: 500 },
-    );
+    console.error("❌ TIINGO_API_KEY is missing. Aborting.");
+    process.exit(1);
   }
 
   let successCount = 0;
   let failCount = 0;
-  const errors: Array<{ ticker: string; error: string }> = [];
 
   for (const ticker of UNIVERSE) {
     try {
+      console.log(`fetching ${ticker}...`);
       // Fetch last 30 years (or available)
-      // Ideally we only fetch new data, but for now we fetch full history to ensure backfill.
       const prices = await fetchHistoricalPrices(ticker, {
         startDate: "1995-01-01",
       });
 
       if (prices.length === 0) {
+        console.warn(`⚠️ No data found for ${ticker}`);
         failCount++;
         continue;
       }
 
-      // Batch insert/upsert
+      console.log(`stores ${prices.length} records for ${ticker}...`);
+
       await db.transaction(async (tx) => {
         const chunkSize = 1000;
         for (let i = 0; i < prices.length; i += chunkSize) {
@@ -120,16 +109,11 @@ export async function GET(request: Request) {
     } catch (err) {
       console.error(`❌ Failed to process ${ticker}:`, err);
       failCount++;
-      errors.push({
-        ticker,
-        error: err instanceof Error ? err.message : String(err),
-      });
     }
   }
 
-  return NextResponse.json({
-    success: true,
-    stats: { success: successCount, failed: failCount },
-    errors,
-  });
+  console.log(`\n✅ Completed. Success: ${successCount}, Failed: ${failCount}`);
+  process.exit(0);
 }
+
+main();

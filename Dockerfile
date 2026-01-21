@@ -55,10 +55,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy necessary files from builder
+# Copy Next.js standalone output and assets
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Fakesharp Pattern: Copy source & scripts for standalone execution associated with Drizzle/TS
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/package.json ./
+
+# Install execution tools (tsx) globally
+RUN npm install -g tsx dotenv
 
 USER nextjs
 EXPOSE 3000

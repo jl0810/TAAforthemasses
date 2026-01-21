@@ -11,7 +11,8 @@
     "deploy": "git push && .husky/post-push",
     "prepare": "husky",
     "lint-staged": "lint-staged",
-    "env:push": "tsx ../platform/scripts/push-env.ts"
+    "env:push": "tsx ../platform/scripts/push-env.ts",
+    "script:update-prices": "tsx scripts/update-prices.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -42,7 +43,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "tsx": "^4.19.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
