@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { NavDock } from "@/components/layout/nav-dock";
+import { Header } from "@/components/layout/header";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -28,7 +29,9 @@ export default function RootLayout({
           <div className="absolute bottom-[10%] right-[-5%] w-[35%] h-[35%] rounded-full bg-emerald-500/10 blur-[100px]" />
         </div>
 
-        <main className="max-w-7xl mx-auto px-4 pt-8">{children}</main>
+        <Header />
+
+        <main className="max-w-7xl mx-auto px-4 pt-24 pb-8">{children}</main>
 
         <NavDock />
       </body>
