@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { marketPrices } from "@/db/schema/tables";
 import { fetchHistoricalPrices } from "@/lib/integrations/tiingo-client";
 import { sql } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 // 30 ETF Universe (Broad Assets + Sectors)
 const UNIVERSE = [
@@ -16,68 +17,73 @@ const UNIVERSE = [
   "BIL",
 
   // US Sectors (SPDR)
-  "XLE", // Energy
-  "XLU", // Utilities
-  "XLK", // Tech
-  "XLV", // Health
-  "XLF", // Financials
-  "XLI", // Industrials
-  "XLP", // Consumer Staples
-  "XLY", // Consumer Discretionary
-  "XLB", // Materials
-  "XLC", // Comm Services
-  "XLR", // Real Estate (Legacy)
+  "XLE",
+  "XLU",
+  "XLK",
+  "XLV",
+  "XLF",
+  "XLI",
+  "XLP",
+  "XLY",
+  "XLB",
+  "XLC",
+  "XLR",
 
   // Factors / Styles
-  "MTUM", // Momentum
-  "VTV", // Value
-  "VUG", // Growth
-  "USMV", // Low Vol
-  "QUAL", // Quality
+  "MTUM",
+  "VTV",
+  "VUG",
+  "USMV",
+  "QUAL",
 
   // Bonds/Credit
-  "LQD", // Corporate
-  "HYG", // High Yield
-  "TLT", // long treasuries
-  "IEF", // mid treasuries
-  "SHY", // short treasuries
+  "LQD",
+  "HYG",
+  "TLT",
+  "IEF",
+  "SHY",
 ];
 
-async function main() {
+// Allow 5 minute execution time (Vercel/Next.js default is often 10s-60s)
+export const maxDuration = 300;
+
+export async function GET(request: Request) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   console.log(
-    `🚀 Starting nightly price update for ${UNIVERSE.length} assets...`,
+    `🚀 Starting scheduled price update for ${UNIVERSE.length} assets...`,
   );
+
   const apiKey = process.env.TIINGO_API_KEY;
   if (!apiKey) {
-    console.error("❌ TIINGO_API_KEY is missing. Aborting.");
-    process.exit(1);
+    return NextResponse.json(
+      { error: "TIINGO_API_KEY missing" },
+      { status: 500 },
+    );
   }
 
   let successCount = 0;
   let failCount = 0;
+  const errors: Array<{ ticker: string; error: string }> = [];
 
   for (const ticker of UNIVERSE) {
     try {
-      console.log(`fetching ${ticker}...`);
       // Fetch last 30 years (or available)
       // Ideally we only fetch new data, but for now we fetch full history to ensure backfill.
-      // Optimization: In production, check max date in DB and fetch forward.
       const prices = await fetchHistoricalPrices(ticker, {
         startDate: "1995-01-01",
       });
 
       if (prices.length === 0) {
-        console.warn(`⚠️ No data found for ${ticker}`);
         failCount++;
         continue;
       }
 
-      console.log(`stores ${prices.length} records for ${ticker}...`);
-
       // Batch insert/upsert
-      // Drizzle 'onConflictDoUpdate' is cleaner
       await db.transaction(async (tx) => {
-        // We'll chunk the inserts to avoid massive query size (Tiingo returns ~5000 rows for 20 years)
         const chunkSize = 1000;
         for (let i = 0; i < prices.length; i += chunkSize) {
           const chunk = prices.slice(i, i + chunkSize);
@@ -85,8 +91,8 @@ async function main() {
           const values = chunk.map((p) => ({
             id: crypto.randomUUID(),
             symbol: ticker,
-            date: new Date(p.date), // Ensure Date object
-            open: 0, // Tiingo EOD often simplifies, we focus on adjClose
+            date: new Date(p.date),
+            open: 0,
             high: 0,
             low: 0,
             close: p.close,
@@ -102,10 +108,7 @@ async function main() {
               target: [marketPrices.symbol, marketPrices.date],
               set: {
                 close: sql`excluded.close`,
-                adjClose: sql`excluded.adj_close`, // Map to snake_case column if needed, or drizzle handles it?
-                // Drizzle handles camelCase -> snake_case map if defined in schema.
-                // But let's check schema definition. `adjClose` maps to `adj_close`.
-                // In onConflictDoUpdate `set`, we refer to the column helpers.
+                adjClose: sql`excluded.adj_close`,
                 volume: sql`excluded.volume`,
                 updatedAt: new Date(),
               },
@@ -117,11 +120,16 @@ async function main() {
     } catch (err) {
       console.error(`❌ Failed to process ${ticker}:`, err);
       failCount++;
+      errors.push({
+        ticker,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
-  console.log(`\n✅ Completed. Success: ${successCount}, Failed: ${failCount}`);
-  process.exit(0);
+  return NextResponse.json({
+    success: true,
+    stats: { success: successCount, failed: failCount },
+    errors,
+  });
 }
-
-main();
