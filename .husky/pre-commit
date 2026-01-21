@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+
+../platform/scripts/hooks/pre-commit.sh
