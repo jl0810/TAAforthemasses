@@ -2,6 +2,15 @@
 FROM node:22-alpine AS base
 WORKDIR /app
 
+# DEPS-PROD: Install production dependencies only (for scripts)
+FROM base AS deps-prod
+ARG GITHUB_TOKEN
+RUN if [ -z "$GITHUB_TOKEN" ]; then exit 1; fi
+RUN echo "@jl0810:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+COPY package.json package-lock.json ./
+RUN npm install --omit=dev --legacy-peer-deps
+
 # BUILDER
 FROM base AS builder
 ARG GITHUB_TOKEN
@@ -45,6 +54,8 @@ ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
 # Run the build
 RUN npm run build
 
+
+
 # RUNNER
 FROM base AS runner
 WORKDIR /app
@@ -55,16 +66,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy Next.js standalone output and assets
+# Copy Next.js standalone output (app logic)
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Fakesharp Pattern: Copy source & scripts for standalone execution associated with Drizzle/TS
+# Fakesharp Pattern: Copy source & scripts
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+
+# OVERWRITE node_modules with full production deps (ensures scripts have what they need)
+COPY --from=deps-prod --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Install execution tools (tsx) globally
 RUN npm install -g tsx dotenv
