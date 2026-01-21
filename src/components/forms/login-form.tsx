@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { signIn } from "@/lib/auth-client";
-import { Loader2, Mail, Github, Globe } from "lucide-react";
+import { Loader2, Mail, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner"; // Assuming sonner is installed or will use basic alert
 
@@ -81,7 +81,7 @@ export function LoginForm() {
 
       <div className="space-y-4">
         {/* Social Buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
           <button
             onClick={() => handleSocialSignIn("google")}
             disabled={loading}
@@ -92,19 +92,7 @@ export function LoginForm() {
             ) : (
               <Globe size={16} />
             )}
-            Google
-          </button>
-          <button
-            onClick={() => handleSocialSignIn("github")}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all border border-white/10 rounded-xl py-3 text-white font-medium text-sm disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Github size={16} />
-            )}
-            GitHub
+            Continue with Google
           </button>
         </div>
 

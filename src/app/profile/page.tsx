@@ -2,8 +2,10 @@ import React from "react";
 import { UserCircle } from "lucide-react";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
 import { getUserPreferences } from "@/app/actions/user";
+import { requireAuth } from "@/lib/auth";
 
 export default async function ProfilePage() {
+  await requireAuth();
   const preferences = await getUserPreferences();
 
   return (

@@ -1,8 +1,10 @@
 import React from "react";
 import { FlaskConical } from "lucide-react";
 import { StrategyLab } from "@/components/dashboard/strategy-lab";
+import { requireAuth } from "@/lib/auth";
 
-export default function LabPage() {
+export default async function LabPage() {
+  await requireAuth();
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
