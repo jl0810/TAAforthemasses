@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMarketSignals, MarketSignal } from "@/app/actions/market";
+import { useSession } from "@/lib/auth-client";
+import { LandingHero } from "@/components/dashboard/landing-hero";
 
 export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
@@ -33,9 +35,17 @@ export default function HomePage() {
     loadSignals();
   }, [maType]);
 
+  // Auth State
+  const { data: session, isPending: isAuthPending } = useSession();
+
   // Aggregate Risk Level
   const riskOnCount = signals.filter((s) => s.status === "Risk-On").length;
   const isMarketStrong = riskOnCount >= 3;
+
+  // Show Marketing Page if not logged in
+  if (!isAuthPending && !session) {
+    return <LandingHero />;
+  }
 
   return (
     <div className="space-y-10 pb-10">
