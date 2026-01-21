@@ -1,14 +1,15 @@
 "use server";
 
-import {
-  fetchHistoricalPrices,
-  getMonthEndPrices,
-} from "@/lib/integrations/tiingo-client";
+import { db } from "@/lib/db";
+import { marketPrices } from "@/db/schema/tables";
+import { eq, gte, desc, and } from "drizzle-orm";
+import { fetchHistoricalPrices } from "@/lib/integrations/tiingo-client";
 import {
   calculateMovingAverage,
   calculateSafetyBuffer,
   getSignalAction,
 } from "@/lib/taa-math";
+import { getUserPreferences } from "@/app/actions/user";
 
 export interface SignalHistory {
   month: string;
@@ -27,14 +28,7 @@ export interface MarketSignal {
   status: "Risk-On" | "Risk-Off";
   lastUpdated: string;
   history: SignalHistory[];
-  isMock?: boolean;
 }
-
-import { getUserPreferences } from "@/app/actions/user";
-
-// ... keep existing imports ...
-
-// ... keep SignalHistory and MarketSignal interfaces ...
 
 const DEFAULT_IVY_5 = [
   { id: "usStocks", symbol: "VTI", name: "US Stocks" },
@@ -44,119 +38,140 @@ const DEFAULT_IVY_5 = [
   { id: "commodities", symbol: "GSG", name: "Commodities" },
 ];
 
+/**
+ * Get month-end prices from daily data
+ */
+function getMonthEndPrices(prices: Array<{ date: Date; adjClose: number }>) {
+  const monthlyMap = new Map<string, { date: Date; adjClose: number }>();
+
+  prices.forEach((p) => {
+    const monthKey = `${p.date.getFullYear()}-${String(p.date.getMonth() + 1).padStart(2, "0")}`;
+    const existing = monthlyMap.get(monthKey);
+    if (!existing || p.date > existing.date) {
+      monthlyMap.set(monthKey, p);
+    }
+  });
+
+  return Array.from(monthlyMap.values()).sort(
+    (a, b) => a.date.getTime() - b.date.getTime(),
+  );
+}
+
 export async function getMarketSignals(
   maType: "SMA" | "EMA" = "SMA",
 ): Promise<MarketSignal[]> {
-  try {
-    const preferences = await getUserPreferences();
+  const preferences = await getUserPreferences();
 
-    // Map preferences to asset list
-    const assets = DEFAULT_IVY_5.map((asset) => ({
-      ...asset,
-      symbol:
-        preferences.tickers[asset.id as keyof typeof preferences.tickers] ||
-        asset.symbol,
-    }));
+  // Map preferences to asset list
+  const assets = DEFAULT_IVY_5.map((asset) => ({
+    ...asset,
+    symbol:
+      preferences.tickers[asset.id as keyof typeof preferences.tickers] ||
+      asset.symbol,
+  }));
 
-    const signals = await Promise.all(
-      assets.map(async (asset) => {
-        // Fetch ~26 months of daily data to ensure we have 10 months for MA seeding + 12 months of history
-        const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 26);
+  const signals = await Promise.all(
+    assets.map(async (asset) => {
+      // 1. Query historical data from database (26 months back for MA seeding + 12 month history)
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - 26);
 
-        const rawPrices = await fetchHistoricalPrices(asset.symbol, {
-          startDate: startDate.toISOString().split("T")[0],
-        });
+      const historicalData = await db
+        .select({
+          date: marketPrices.date,
+          adjClose: marketPrices.adjClose,
+        })
+        .from(marketPrices)
+        .where(
+          and(
+            eq(marketPrices.symbol, asset.symbol),
+            gte(marketPrices.date, startDate),
+          ),
+        )
+        .orderBy(desc(marketPrices.date));
 
-        const monthEnds = getMonthEndPrices(rawPrices);
+      if (historicalData.length < 11) {
+        throw new Error(
+          `Insufficient historical data for ${asset.symbol}. Found ${historicalData.length} records, need at least 11.`,
+        );
+      }
 
-        if (monthEnds.length < 11) {
-          throw new Error(`Insufficient data for ${asset.symbol}`);
-        }
+      // Reverse to chronological order
+      const rawPrices = historicalData.reverse();
 
-        const currentPrice = rawPrices[rawPrices.length - 1].adjClose;
-        const history: SignalHistory[] = [];
+      // 2. Fetch today's spot price from Tiingo (just 1 day)
+      const today = new Date().toISOString().split("T")[0];
+      const spotData = await fetchHistoricalPrices(asset.symbol, {
+        startDate: today,
+      });
 
-        // Generate 12 months of history
-        // We start from 12 months back and go up to current
-        for (let i = 0; i < 12; i++) {
-          const index = monthEnds.length - 1 - (11 - i);
-          if (index < 9) continue; // Need at least 10 preceding months for first MA
+      const currentPrice =
+        spotData.length > 0
+          ? spotData[spotData.length - 1].adjClose
+          : rawPrices[rawPrices.length - 1].adjClose;
 
-          const sliceForMA = monthEnds.slice(0, index + 1);
-          const monthPrice = monthEnds[index].adjClose;
-          const monthTrend = calculateMovingAverage(
-            sliceForMA.map((p) => p.adjClose),
-            maType,
-            10,
-          );
+      // 3. Calculate month-end prices
+      const monthEnds = getMonthEndPrices(rawPrices);
 
-          // Get prev for action logic
-          const prevPrice = monthEnds[index - 1].adjClose;
-          const prevTrend = calculateMovingAverage(
-            monthEnds.slice(0, index).map((p) => p.adjClose),
-            maType,
-            10,
-          );
+      if (monthEnds.length < 11) {
+        throw new Error(`Insufficient month-end data for ${asset.symbol}`);
+      }
 
-          history.push({
-            month: new Date(monthEnds[index].date).toLocaleDateString("en-US", {
-              month: "short",
-              year: "2-digit",
-            }),
-            price: monthPrice,
-            trend: monthTrend,
-            status: monthPrice > monthTrend ? "Risk-On" : "Risk-Off",
-            action: getSignalAction(
-              monthPrice,
-              monthTrend,
-              prevPrice,
-              prevTrend,
-            ),
-          });
-        }
+      const history: SignalHistory[] = [];
 
-        // Current Metrics
-        const currentTrend = calculateMovingAverage(
-          monthEnds.map((p) => p.adjClose),
+      // Generate 12 months of history
+      for (let i = 0; i < 12; i++) {
+        const index = monthEnds.length - 1 - (11 - i);
+        if (index < 9) continue; // Need at least 10 preceding months for first MA
+
+        const sliceForMA = monthEnds.slice(0, index + 1);
+        const monthPrice = monthEnds[index].adjClose;
+        const monthTrend = calculateMovingAverage(
+          sliceForMA.map((p) => p.adjClose),
           maType,
           10,
         );
-        const buffer = calculateSafetyBuffer(currentPrice, currentTrend);
 
-        return {
-          symbol: asset.symbol,
-          name: asset.name,
-          price: currentPrice,
-          trend: currentTrend,
-          buffer: buffer,
-          status: buffer > 0 ? "Risk-On" : "Risk-Off",
-          lastUpdated: new Date().toISOString(),
-          history: history,
-        } as MarketSignal;
-      }),
-    );
+        // Get prev for action logic
+        const prevPrice = monthEnds[index - 1].adjClose;
+        const prevTrend = calculateMovingAverage(
+          monthEnds.slice(0, index).map((p) => p.adjClose),
+          maType,
+          10,
+        );
 
-    return signals;
-  } catch (error) {
-    console.error("Failed to fetch market signals:", error);
-    // Return mock data for demo if API fails or key is missing
-    return DEFAULT_IVY_5.map((asset) => ({
-      symbol: asset.symbol,
-      name: `Mock ${asset.name}`,
-      price: 100,
-      trend: 95,
-      buffer: 5,
-      status: "Risk-On",
-      lastUpdated: "DEMO",
-      history: Array.from({ length: 12 }).map((_, i) => ({
-        month: "Jan 24",
-        price: 100,
-        trend: 95,
-        status: "Risk-On",
-        action: "Hold",
-      })),
-      isMock: true,
-    })) as MarketSignal[];
-  }
+        history.push({
+          month: new Date(monthEnds[index].date).toLocaleDateString("en-US", {
+            month: "short",
+            year: "2-digit",
+          }),
+          price: monthPrice,
+          trend: monthTrend,
+          status: monthPrice > monthTrend ? "Risk-On" : "Risk-Off",
+          action: getSignalAction(monthPrice, monthTrend, prevPrice, prevTrend),
+        });
+      }
+
+      // Current Metrics
+      const currentTrend = calculateMovingAverage(
+        monthEnds.map((p) => p.adjClose),
+        maType,
+        10,
+      );
+      const buffer = calculateSafetyBuffer(currentPrice, currentTrend);
+
+      return {
+        symbol: asset.symbol,
+        name: asset.name,
+        price: currentPrice,
+        trend: currentTrend,
+        buffer: buffer,
+        status: buffer > 0 ? "Risk-On" : "Risk-Off",
+        lastUpdated: new Date().toISOString(),
+        history: history,
+      } as MarketSignal;
+    }),
+  );
+
+  return signals;
 }
