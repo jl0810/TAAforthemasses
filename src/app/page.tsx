@@ -16,11 +16,13 @@ import { getMarketSignals, MarketSignal } from "@/app/actions/market";
 export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [maType, setMaType] = useState<"SMA" | "EMA">("SMA");
 
   useEffect(() => {
     async function loadSignals() {
+      setLoading(true);
       try {
-        const data = await getMarketSignals();
+        const data = await getMarketSignals(maType);
         setSignals(data);
       } catch (error) {
         console.error("Error loading signals:", error);
@@ -29,7 +31,7 @@ export default function HomePage() {
       }
     }
     loadSignals();
-  }, []);
+  }, [maType]);
 
   // Aggregate Risk Level
   const riskOnCount = signals.filter((s) => s.status === "Risk-On").length;
@@ -173,7 +175,12 @@ export default function HomePage() {
 
       {/* Main Signal Matrix */}
       <section>
-        <SignalMatrix signals={signals} loading={loading} />
+        <SignalMatrix
+          signals={signals}
+          loading={loading}
+          maType={maType}
+          onToggleMA={setMaType}
+        />
       </section>
 
       {/* Momentum Leaderboard */}

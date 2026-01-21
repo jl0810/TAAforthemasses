@@ -7,30 +7,50 @@
  * Simple Moving Average (SMA)
  * The arithmetic mean of the last n monthly closing prices.
  */
-export function calculateSMA(prices: number[]): number {
-  if (prices.length === 0) return 0;
-  const sum = prices.reduce((a, b) => a + b, 0);
-  return sum / prices.length;
+/**
+ * Moving Average calculation (SMA or EMA)
+ */
+export function calculateMovingAverage(
+  prices: number[],
+  type: "SMA" | "EMA",
+  n: number = 10,
+): number {
+  if (prices.length < n) return 0;
+  if (type === "SMA") {
+    const window = prices.slice(-n);
+    return window.reduce((a, b) => a + b, 0) / n;
+  } else {
+    // For EMA, we use the standard calculation
+    // Note: For high accuracy, EMA usually needs more history than 'n' to stabilize
+    const k = 2 / (n + 1);
+    let ema = prices[0];
+    for (let i = 1; i < prices.length; i++) {
+      ema = prices[i] * k + ema * (1 - k);
+    }
+    return ema;
+  }
 }
 
 /**
- * Exponential Moving Average (EMA)
- * A weighted average that applies more weight to recent prices.
+ * Determines the action (Buy, Sell, Hold, Stay Cash) based on price/trend crossing
  */
-export function calculateEMA(prices: number[], n: number = 10): number {
-  if (prices.length === 0) return 0;
-  const k = 2 / (n + 1);
-  let ema = prices[0]; // Start with the first price
+export function getSignalAction(
+  currentPrice: number,
+  currentTrend: number,
+  prevPrice: number,
+  prevTrend: number,
+): "Buy" | "Sell" | "Hold" | "Stay Cash" {
+  const isCurrentlyUp = currentPrice > currentTrend;
+  const wasPreviouslyUp = prevPrice > prevTrend;
 
-  for (let i = 1; i < prices.length; i++) {
-    ema = prices[i] * k + ema * (1 - k);
-  }
-  return ema;
+  if (isCurrentlyUp && !wasPreviouslyUp) return "Buy";
+  if (!isCurrentlyUp && wasPreviouslyUp) return "Sell";
+  if (isCurrentlyUp && wasPreviouslyUp) return "Hold";
+  return "Stay Cash";
 }
 
 /**
  * Safety Buffer Calculation
- * Derived from the percentage distance between current price and trend line.
  */
 export function calculateSafetyBuffer(
   currentPrice: number,

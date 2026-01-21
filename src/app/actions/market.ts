@@ -4,7 +4,19 @@ import {
   fetchHistoricalPrices,
   getMonthEndPrices,
 } from "@/lib/integrations/tiingo-client";
-import { calculateSMA, calculateSafetyBuffer } from "@/lib/taa-math";
+import {
+  calculateMovingAverage,
+  calculateSafetyBuffer,
+  getSignalAction,
+} from "@/lib/taa-math";
+
+export interface SignalHistory {
+  month: string;
+  price: number;
+  trend: number;
+  status: "Risk-On" | "Risk-Off";
+  action: "Buy" | "Sell" | "Hold" | "Stay Cash";
+}
 
 export interface MarketSignal {
   symbol: string;
@@ -14,6 +26,7 @@ export interface MarketSignal {
   buffer: number;
   status: "Risk-On" | "Risk-Off";
   lastUpdated: string;
+  history: SignalHistory[];
 }
 
 const IVY_5 = [
@@ -24,13 +37,15 @@ const IVY_5 = [
   { symbol: "GSG", name: "Commodities" },
 ];
 
-export async function getMarketSignals(): Promise<MarketSignal[]> {
+export async function getMarketSignals(
+  maType: "SMA" | "EMA" = "SMA",
+): Promise<MarketSignal[]> {
   try {
     const signals = await Promise.all(
       IVY_5.map(async (asset) => {
-        // Fetch ~15 months of daily data to ensure we have 10 full month-ends plus current month
+        // Fetch ~26 months of daily data to ensure we have 10 months for MA seeding + 12 months of history
         const startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 15);
+        startDate.setMonth(startDate.getMonth() - 26);
 
         const rawPrices = await fetchHistoricalPrices(asset.symbol, {
           startDate: startDate.toISOString().split("T")[0],
@@ -38,29 +53,69 @@ export async function getMarketSignals(): Promise<MarketSignal[]> {
 
         const monthEnds = getMonthEndPrices(rawPrices);
 
-        // We need at least 11 points (10 for SMA, 1 for current price comparison)
-        if (monthEnds.length < 10) {
+        if (monthEnds.length < 11) {
           throw new Error(`Insufficient data for ${asset.symbol}`);
         }
 
-        // Current price is the latest month-end or recent daily adjClose
         const currentPrice = rawPrices[rawPrices.length - 1].adjClose;
+        const history: SignalHistory[] = [];
 
-        // SMA-10 uses the last 10 full months
-        // If the current month is incomplete, we usually use the last 10 completed months
-        const smaTen = calculateSMA(
-          monthEnds.slice(-10).map((p) => p.adjClose),
+        // Generate 12 months of history
+        // We start from 12 months back and go up to current
+        for (let i = 0; i < 12; i++) {
+          const index = monthEnds.length - 1 - (11 - i);
+          if (index < 9) continue; // Need at least 10 preceding months for first MA
+
+          const sliceForMA = monthEnds.slice(0, index + 1);
+          const monthPrice = monthEnds[index].adjClose;
+          const monthTrend = calculateMovingAverage(
+            sliceForMA.map((p) => p.adjClose),
+            maType,
+            10,
+          );
+
+          // Get prev for action logic
+          const prevPrice = monthEnds[index - 1].adjClose;
+          const prevTrend = calculateMovingAverage(
+            monthEnds.slice(0, index).map((p) => p.adjClose),
+            maType,
+            10,
+          );
+
+          history.push({
+            month: new Date(monthEnds[index].date).toLocaleDateString("en-US", {
+              month: "short",
+              year: "2-digit",
+            }),
+            price: monthPrice,
+            trend: monthTrend,
+            status: monthPrice > monthTrend ? "Risk-On" : "Risk-Off",
+            action: getSignalAction(
+              monthPrice,
+              monthTrend,
+              prevPrice,
+              prevTrend,
+            ),
+          });
+        }
+
+        // Current Metrics
+        const currentTrend = calculateMovingAverage(
+          monthEnds.map((p) => p.adjClose),
+          maType,
+          10,
         );
-        const buffer = calculateSafetyBuffer(currentPrice, smaTen);
+        const buffer = calculateSafetyBuffer(currentPrice, currentTrend);
 
         return {
           symbol: asset.symbol,
           name: asset.name,
           price: currentPrice,
-          trend: smaTen,
+          trend: currentTrend,
           buffer: buffer,
           status: buffer > 0 ? "Risk-On" : "Risk-Off",
           lastUpdated: new Date().toISOString(),
+          history: history,
         } as MarketSignal;
       }),
     );
@@ -69,52 +124,21 @@ export async function getMarketSignals(): Promise<MarketSignal[]> {
   } catch (error) {
     console.error("Failed to fetch market signals:", error);
     // Return mock data for demo if API fails or key is missing
-    return [
-      {
-        symbol: "VTI",
-        name: "Mock US Stocks",
-        price: 295.42,
-        trend: 282.15,
-        buffer: 4.7,
+    return IVY_5.map((asset) => ({
+      symbol: asset.symbol,
+      name: `Mock ${asset.name}`,
+      price: 100,
+      trend: 95,
+      buffer: 5,
+      status: "Risk-On",
+      lastUpdated: "DEMO",
+      history: Array.from({ length: 12 }).map((_, i) => ({
+        month: "Jan 24",
+        price: 100,
+        trend: 95,
         status: "Risk-On",
-        lastUpdated: "DEMO",
-      },
-      {
-        symbol: "VEA",
-        name: "Mock Intl Stocks",
-        price: 54.12,
-        trend: 51.8,
-        buffer: 4.4,
-        status: "Risk-On",
-        lastUpdated: "DEMO",
-      },
-      {
-        symbol: "BND",
-        name: "Mock US Bonds",
-        price: 72.85,
-        trend: 74.2,
-        buffer: -1.8,
-        status: "Risk-Off",
-        lastUpdated: "DEMO",
-      },
-      {
-        symbol: "GSG",
-        name: "Mock Commodities",
-        price: 21.05,
-        trend: 20.15,
-        buffer: 4.5,
-        status: "Risk-On",
-        lastUpdated: "DEMO",
-      },
-      {
-        symbol: "VNQ",
-        name: "Mock Real Estate",
-        price: 98.6,
-        trend: 92.4,
-        buffer: 6.7,
-        status: "Risk-On",
-        lastUpdated: "DEMO",
-      },
-    ];
+        action: "Hold",
+      })),
+    })) as MarketSignal[];
   }
 }
