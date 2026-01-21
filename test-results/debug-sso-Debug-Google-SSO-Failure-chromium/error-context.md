@@ -1,0 +1,51 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+    - banner [ref=e3]:
+        - generic [ref=e4]:
+            - link "TAA. Tactical Alpha" [ref=e5] [cursor=pointer]:
+                - /url: /
+                - img [ref=e7]
+                - generic [ref=e9]:
+                    - heading "TAA." [level=1] [ref=e10]
+                    - paragraph [ref=e11]: Tactical Alpha
+            - link "Sign In" [ref=e13] [cursor=pointer]:
+                - /url: /login
+                - img [ref=e14]
+                - text: Sign In
+    - main [ref=e17]:
+        - generic [ref=e24]:
+            - generic [ref=e25]:
+                - heading "Welcome Back" [level=1] [ref=e26]
+                - paragraph [ref=e27]: Sign in to access your tactical strategies
+            - generic [ref=e28]:
+                - button "Continue with Google" [ref=e30]:
+                    - img [ref=e31]
+                    - text: Continue with Google
+                - generic [ref=e38]: Or continue with email
+                - generic [ref=e39]:
+                    - textbox "name@example.com" [ref=e41]
+                    - button "Sign in with Magic Link" [disabled] [ref=e42]:
+                        - text: Sign in with Magic Link
+                        - img [ref=e43]
+            - paragraph [ref=e46]: By clicking continue, you agree to our Terms of Service and Privacy Policy.
+    - navigation [ref=e47]:
+        - link "Pulse" [ref=e48] [cursor=pointer]:
+            - /url: /
+            - img [ref=e49]
+            - generic [ref=e51]: Pulse
+        - link "Lab" [ref=e52] [cursor=pointer]:
+            - /url: /playground
+            - img [ref=e53]
+            - generic [ref=e56]: Lab
+        - link "Command" [ref=e57] [cursor=pointer]:
+            - /url: /command
+            - img [ref=e58]
+            - generic [ref=e61]: Command
+        - link "Profile" [ref=e62] [cursor=pointer]:
+            - /url: /profile
+            - img [ref=e63]
+            - generic [ref=e67]: Profile
+    - alert [ref=e68]
+```
