@@ -27,6 +27,7 @@ export interface MarketSignal {
   status: "Risk-On" | "Risk-Off";
   lastUpdated: string;
   history: SignalHistory[];
+  isMock?: boolean;
 }
 
 import { getUserPreferences } from "@/app/actions/user";
@@ -155,6 +156,7 @@ export async function getMarketSignals(
         status: "Risk-On",
         action: "Hold",
       })),
+      isMock: true,
     })) as MarketSignal[];
   }
 }

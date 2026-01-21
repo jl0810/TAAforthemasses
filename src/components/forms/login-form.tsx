@@ -15,7 +15,7 @@ export function LoginForm() {
     setLoading(true);
     await signIn.social({
       provider,
-      callbackURL: "/dashboard", // Or wherever we want to go
+      callbackURL: "/", // Redirect to home/dashboard
     });
     setLoading(false);
   }
@@ -26,7 +26,7 @@ export function LoginForm() {
     try {
       const { error } = await signIn.magicLink({
         email,
-        callbackURL: "/dashboard",
+        callbackURL: "/",
       });
 
       if (error) {

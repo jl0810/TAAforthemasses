@@ -68,6 +68,6 @@ export async function updateUserPreferences(config: UserPreferenceConfig) {
     });
   }
 
-  revalidatePath("/dashboard");
+  revalidatePath("/");
   revalidatePath("/profile");
 }

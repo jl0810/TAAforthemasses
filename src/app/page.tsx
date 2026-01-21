@@ -49,6 +49,23 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10 pb-10">
+      {/* Demo Mode Warning */}
+      {signals[0]?.isMock && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200 flex items-center justify-between mb-8"
+        >
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={20} className="text-amber-500" />
+            <span className="font-bold">Demo Mode Active</span>
+          </div>
+          <span className="text-xs md:text-sm opacity-60 font-medium">
+            Using mock data. Add TIINGO_API_KEY to enable live signals.
+          </span>
+        </motion.div>
+      )}
+
       {/* Header / Hero */}
       <section className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div>
