@@ -61,10 +61,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Fakesharp Pattern: Copy source & scripts for standalone execution associated with Drizzle/TS
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 
 # Install execution tools (tsx) globally
 RUN npm install -g tsx dotenv
