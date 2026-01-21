@@ -28,8 +28,8 @@ COPY . .
 
 # Force-fix: Uninstall local deps and install from registry
 # This ensures package.json and node_modules are correctly updated without lockfile conflicts
-RUN npm uninstall @jl0810/auth @jl0810/db-client && \
-    npm install @jl0810/auth @jl0810/db-client --legacy-peer-deps
+RUN npm uninstall @jl0810/auth @jl0810/db-client @jl0810/messaging && \
+    npm install @jl0810/auth @jl0810/db-client @jl0810/messaging --legacy-peer-deps
 
 # Ensure the .npmrc is still there for potential postinstall or build checks
 RUN echo "@jl0810:registry=https://npm.pkg.github.com" > .npmrc && \
