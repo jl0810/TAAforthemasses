@@ -11,8 +11,14 @@ export const auth = createAuth(
     supportEmail: "support@raydoug.com",
   },
   {
+    socialProviders: {
+      google: {
+        clientId: process.env.AUTH_GOOGLE_ID!,
+        clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+      },
+    },
     advanced: {
-      trustedOrigins: ["http://localhost:3000"],
+      trustedOrigins: ["http://localhost:3000", "https://taaforthemasses.com"],
     },
   },
 );
