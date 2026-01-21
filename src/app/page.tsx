@@ -18,16 +18,21 @@ import { LandingHero } from "@/components/dashboard/landing-hero";
 export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [maType, setMaType] = useState<"SMA" | "EMA">("SMA");
 
   useEffect(() => {
     async function loadSignals() {
       setLoading(true);
+      setError(null);
       try {
         const data = await getMarketSignals(maType);
         setSignals(data);
       } catch (error) {
         console.error("Error loading signals:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load market data",
+        );
       } finally {
         setLoading(false);
       }
