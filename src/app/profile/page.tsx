@@ -1,12 +1,15 @@
 import React from "react";
 import { UserCircle } from "lucide-react";
 import { ProfileSettings } from "@/components/dashboard/profile-settings";
-import { getUserPreferences } from "@/app/actions/user";
+import { getUserPreferences, getAvailableETFs } from "@/app/actions/user";
 import { requireAuth } from "@/lib/auth";
 
 export default async function ProfilePage() {
   await requireAuth();
-  const preferences = await getUserPreferences();
+  const [preferences, availableETFs] = await Promise.all([
+    getUserPreferences(),
+    getAvailableETFs(),
+  ]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 pb-20">
@@ -29,7 +32,10 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      <ProfileSettings initialConfig={preferences} />
+      <ProfileSettings
+        initialConfig={preferences}
+        availableETFs={availableETFs}
+      />
     </div>
   );
 }

@@ -4,15 +4,17 @@ import React, { useState } from "react";
 import {
   UserPreferenceConfig,
   updateUserPreferences,
+  AvailableETF,
 } from "@/app/actions/user";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
   initialConfig: UserPreferenceConfig;
+  availableETFs: AvailableETF[];
 }
 
-export function ProfileSettings({ initialConfig }: Props) {
+export function ProfileSettings({ initialConfig, availableETFs }: Props) {
   const [config, setConfig] = useState(initialConfig);
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +32,18 @@ export function ProfileSettings({ initialConfig }: Props) {
     }
   }
 
+  // Group ETFs by category for the dropdown
+  const etfsByCategory = availableETFs.reduce(
+    (acc, etf) => {
+      if (!acc[etf.category]) {
+        acc[etf.category] = [];
+      }
+      acc[etf.category].push(etf);
+      return acc;
+    },
+    {} as Record<string, AvailableETF[]>,
+  );
+
   return (
     <form onSubmit={handleSave} className="space-y-8">
       <div className="glass-card p-8 rounded-3xl border border-white/10">
@@ -38,14 +52,15 @@ export function ProfileSettings({ initialConfig }: Props) {
             Strategy Configuration
           </h2>
           <p className="text-white/40 text-sm">
-            Customize the ETFs used for each asset class in the Ivy 5 strategy.
+            Select the ETFs for each asset class in the Ivy 5 strategy.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <InputGroup
+          <SelectGroup
             label="US Stocks"
             value={config.tickers.usStocks}
+            etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
@@ -53,9 +68,10 @@ export function ProfileSettings({ initialConfig }: Props) {
               })
             }
           />
-          <InputGroup
+          <SelectGroup
             label="Intl Stocks"
             value={config.tickers.intlStocks}
+            etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
@@ -63,9 +79,10 @@ export function ProfileSettings({ initialConfig }: Props) {
               })
             }
           />
-          <InputGroup
+          <SelectGroup
             label="Bonds"
             value={config.tickers.bonds}
+            etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
@@ -73,9 +90,10 @@ export function ProfileSettings({ initialConfig }: Props) {
               })
             }
           />
-          <InputGroup
+          <SelectGroup
             label="Real Estate"
             value={config.tickers.realEstate}
+            etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
@@ -83,9 +101,10 @@ export function ProfileSettings({ initialConfig }: Props) {
               })
             }
           />
-          <InputGroup
+          <SelectGroup
             label="Commodities"
             value={config.tickers.commodities}
+            etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
@@ -114,26 +133,67 @@ export function ProfileSettings({ initialConfig }: Props) {
   );
 }
 
-function InputGroup({
+function SelectGroup({
   label,
   value,
+  etfsByCategory,
   onChange,
 }: {
   label: string;
   value: string;
+  etfsByCategory: Record<string, AvailableETF[]>;
   onChange: (val: string) => void;
 }) {
+  // Order categories logically
+  const categoryOrder = [
+    "US Stocks",
+    "Intl Stocks",
+    "Bonds",
+    "Real Estate",
+    "Commodities",
+    "Cash",
+    "Sector",
+    "Factor",
+    "Other",
+  ];
+
+  const sortedCategories = Object.keys(etfsByCategory).sort(
+    (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b),
+  );
+
   return (
     <div className="space-y-2">
       <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
         {label}
       </label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value.toUpperCase())}
-        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono font-medium"
-      />
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-mono font-medium cursor-pointer hover:bg-white/10"
+        >
+          {sortedCategories.map((category) => (
+            <optgroup
+              key={category}
+              label={category}
+              className="bg-slate-900 text-white"
+            >
+              {etfsByCategory[category].map((etf) => (
+                <option
+                  key={etf.symbol}
+                  value={etf.symbol}
+                  className="bg-slate-900 text-white py-2"
+                >
+                  {etf.symbol} - {etf.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
+          <ChevronDown size={18} />
+        </div>
+      </div>
     </div>
   );
 }
