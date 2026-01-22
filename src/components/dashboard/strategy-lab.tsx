@@ -310,7 +310,7 @@ export function StrategyLab({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
             <StatCard
               label="CAGR"
               value={results ? `${results.performance.cagr.toFixed(1)}%` : "--"}
@@ -333,6 +333,18 @@ export function StrategyLab({
                   : "--"
               }
               isNegative
+            />
+            <StatCard
+              label="Vol"
+              value={
+                results ? `${results.performance.volatility.toFixed(1)}%` : "--"
+              }
+              benchValue={
+                results
+                  ? `${results.benchmarkPerformance.volatility.toFixed(1)}%`
+                  : "--"
+              }
+              isVol
             />
             <StatCard
               label="Sharpe"
@@ -373,6 +385,7 @@ function StatCard({
   isNegative,
   isSharpe,
   isSortino,
+  isVol,
 }: {
   label: string;
   value: string;
@@ -380,6 +393,7 @@ function StatCard({
   isNegative?: boolean;
   isSharpe?: boolean;
   isSortino?: boolean;
+  isVol?: boolean;
 }) {
   return (
     <div className="text-center bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-between">
@@ -395,7 +409,9 @@ function StatCard({
               ? "text-indigo-400"
               : isSortino
                 ? "text-emerald-400"
-                : "text-white",
+                : isVol
+                  ? "text-amber-400"
+                  : "text-white",
         )}
       >
         {value}

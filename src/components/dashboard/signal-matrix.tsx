@@ -186,7 +186,7 @@ export function SignalMatrix({
               </div>
 
               {selectedAsset.performance && (
-                <div className="grid grid-cols-4 gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+                <div className="grid grid-cols-5 gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
                   <div className="text-center">
                     <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
                       Sharpe
@@ -195,7 +195,7 @@ export function SignalMatrix({
                       {selectedAsset.performance.sharpeRatio.toFixed(2)}
                     </div>
                   </div>
-                  <div className="text-center border-x border-white/10 px-4">
+                  <div className="text-center border-l border-white/10 pl-4">
                     <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
                       Sortino
                     </div>
@@ -203,7 +203,15 @@ export function SignalMatrix({
                       {selectedAsset.performance.sortinoRatio.toFixed(2)}
                     </div>
                   </div>
-                  <div className="text-center border-r border-white/10 pr-4">
+                  <div className="text-center border-l border-white/10 pl-4">
+                    <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
+                      Vol
+                    </div>
+                    <div className="text-sm font-black text-amber-400">
+                      {selectedAsset.performance.volatility.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="text-center border-l border-white/10 pl-4">
                     <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
                       CAGR
                     </div>
@@ -211,7 +219,7 @@ export function SignalMatrix({
                       {selectedAsset.performance.cagr.toFixed(1)}%
                     </div>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center border-l border-white/10 pl-4">
                     <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
                       Max DD
                     </div>
