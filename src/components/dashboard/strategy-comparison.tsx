@@ -14,8 +14,10 @@ import { UserPreferenceConfig } from "@/app/actions/user";
 
 export function StrategyComparison({
   initialConfig,
+  universe = "ivy",
 }: {
   initialConfig: UserPreferenceConfig;
+  universe?: "ivy" | "sectors";
 }) {
   const [lookback, setLookback] = useState<1 | 3 | 10>(10);
   const [results, setResults] = useState<BacktestResult | null>(null);
@@ -29,6 +31,7 @@ export function StrategyComparison({
       const data = await runBacktest({
         lookbackYears: lookback,
         rebalanceFrequency: initialConfig.portfolio.rebalanceFrequency,
+        universe,
       });
       if (data.error) {
         setError(data.error);

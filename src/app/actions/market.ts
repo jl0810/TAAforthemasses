@@ -291,6 +291,7 @@ export async function runBacktest(params?: {
   benchmark?: string;
   lookbackYears?: number;
   rebalanceFrequency?: "Monthly" | "Yearly";
+  universe?: "ivy" | "sectors";
 }): Promise<BacktestResult> {
   try {
     const preferences = await getUserPreferences();
@@ -310,13 +311,20 @@ export async function runBacktest(params?: {
       preferences.global.rebalanceFrequency ||
       "Monthly";
     const lookbackYears = params?.lookbackYears || 10;
+    const universe = params?.universe || "ivy";
 
-    const assets = DEFAULT_IVY_5.map(
-      (asset) =>
-        preferences.portfolio.tickers[
-          asset.id as keyof typeof preferences.portfolio.tickers
-        ] || asset.symbol,
-    );
+    const baseAssets = universe === "sectors" ? SECTOR_UNIVERSE : DEFAULT_IVY_5;
+
+    const assets = baseAssets.map((asset) => {
+      if (universe === "ivy") {
+        return (
+          preferences.portfolio.tickers[
+            asset.id as keyof typeof preferences.portfolio.tickers
+          ] || asset.symbol
+        );
+      }
+      return asset.symbol;
+    });
     const benchmarkTicker =
       params?.benchmark || preferences.portfolio.tickers.benchmark || "AOR";
     const allTickers = [...assets, benchmarkTicker];

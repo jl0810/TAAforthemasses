@@ -162,7 +162,8 @@ export default function HomePage() {
                     : "RISK OFF"}
               </div>
               <div className="text-xs text-white/40 font-medium">
-                Ivy 5 Coverage: {riskOnCount}/5 Leg Active
+                {universe === "ivy" ? "Ivy 5" : "Sector"} Coverage:{" "}
+                {riskOnCount}/{universe === "ivy" ? 5 : 9} Leg Active
               </div>
             </div>
           </motion.div>
@@ -324,7 +325,12 @@ export default function HomePage() {
       </section>
 
       <section>
-        {initialConfig && <StrategyComparison initialConfig={initialConfig} />}
+        {initialConfig && (
+          <StrategyComparison
+            initialConfig={initialConfig}
+            universe={universe}
+          />
+        )}
       </section>
     </div>
   );
