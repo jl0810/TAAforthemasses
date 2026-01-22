@@ -3,10 +3,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   TrendingUp,
-  Calendar,
   ArrowUpRight,
   ArrowDownRight,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { runBacktest, BacktestResult } from "@/app/actions/market";
@@ -20,16 +20,24 @@ export function StrategyComparison({
   const [lookback, setLookback] = useState<1 | 3 | 10>(10);
   const [results, setResults] = useState<BacktestResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await runBacktest({
         lookbackYears: lookback,
       });
-      setResults(data);
-    } catch (error) {
-      console.error("Failed to load comparison data:", error);
+      if (data.error) {
+        setError(data.error);
+        setResults(null);
+      } else {
+        setResults(data);
+      }
+    } catch (err) {
+      console.error("Failed to load comparison data:", err);
+      setError("Unable to connect to simulation engine.");
     } finally {
       setLoading(false);
     }
@@ -62,7 +70,7 @@ export function StrategyComparison({
             Performance Delta
           </h2>
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">
-            Strategy vs {initialConfig.tickers.benchmark} Benchmark
+            Strategy vs {initialConfig.tickers.benchmark || "AOR"} Benchmark
           </p>
         </div>
 
@@ -155,6 +163,16 @@ export function StrategyComparison({
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <Loader2 className="animate-spin text-indigo-400" size={24} />
+            </div>
+          ) : error ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-indigo-500/5 rounded-3xl border border-indigo-500/10">
+              <AlertCircle className="text-indigo-400 mb-3" size={32} />
+              <div className="text-white font-bold mb-1">Sim Data Syncing</div>
+              <p className="text-[10px] text-white/40 uppercase font-black leading-relaxed max-w-[240px]">
+                {error.includes("Insufficient")
+                  ? "Historical data for this benchmark is still processing. Expected online shortly."
+                  : error}
+              </p>
             </div>
           ) : results ? (
             <div className="relative w-full h-full flex items-end gap-[1px]">
