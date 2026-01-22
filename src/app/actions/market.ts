@@ -385,12 +385,16 @@ export async function runBacktest(params?: {
     // SLICE RESULTS TO EXACT LOOKBACK PERIOD
     // The simulation runs on extra data (lookback + 4 vars) to warm up MAs.
     // We must trim the output to show ONLY the requested timeframe.
+    // Generate a cutoff key in YYYY-MM format for strict monthly comparison
     const cutoffDate = new Date();
-    cutoffDate.setFullYear(cutoffDate.getFullYear() - lookbackYears);
-    const cutoffIso = cutoffDate.toISOString().split("T")[0];
+    cutoffDate.setMonth(cutoffDate.getMonth() - lookbackYears * 12);
+    const cutoffKey = `${cutoffDate.getFullYear()}-${String(cutoffDate.getMonth() + 1).padStart(2, "0")}`;
 
     const filterCurve = (curve: { date: string; value: number }[]) => {
-      const sliced = curve.filter((p) => p.date >= cutoffIso);
+      // "Start" label is lexicographically > "202X-XX", so we must explicitly exclude it
+      const sliced = curve.filter(
+        (p) => p.date !== "Start" && p.date >= cutoffKey,
+      );
       if (sliced.length === 0) return curve; // Fallback
       // Re-base to 100
       const startVal = sliced[0].value;
