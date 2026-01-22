@@ -5,15 +5,8 @@ import {
   getBranding,
 } from "@jl0810/messaging";
 
-// Branding definition for TAA since it's not yet in the @jl0810/messaging package
-const branding = {
-  appName: "TAA for the Masses",
-  brandingColor: "#6366f1", // Indigo
-  primaryColor: "#6366f1", // Required by AppBranding interface
-  websiteUrl: process.env.NEXT_PUBLIC_APP_URL || "https://taaforthemasses.com",
-  supportEmail: "support@raydoug.com",
-  logoUrl: "https://taaforthemasses.com/logo.png",
-};
+// Get centralized TAA Branding
+const branding = getBranding("taa");
 
 // Removed static variable to ensure runtime env access
 
