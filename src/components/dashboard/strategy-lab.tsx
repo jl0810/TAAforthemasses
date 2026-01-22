@@ -20,12 +20,16 @@ export function StrategyLab({
   initialConfig: UserPreferenceConfig;
 }) {
   const [concentration, setConcentration] = useState(
-    initialConfig.concentration,
+    initialConfig.global.concentration,
   );
-  const [maType, setMaType] = useState<"SMA" | "EMA">(initialConfig.maType);
-  const [maLength, setMaLength] = useState<10 | 12>(initialConfig.maLength);
+  const [maType, setMaType] = useState<"SMA" | "EMA">(
+    initialConfig.global.maType,
+  );
+  const [maLength, setMaLength] = useState<10 | 12>(
+    initialConfig.global.maLength,
+  );
   const [benchmark, setBenchmark] = useState(
-    initialConfig.tickers.benchmark || "AOR",
+    initialConfig.portfolio.tickers.benchmark || "AOR",
   );
 
   const assets: AssetMap[] = [
@@ -33,31 +37,31 @@ export function StrategyLab({
       id: "usStocks",
       category: "US Stocks",
       defaultTicker: "VTI",
-      customTicker: initialConfig.tickers.usStocks,
+      customTicker: initialConfig.portfolio.tickers.usStocks,
     },
     {
       id: "intlStocks",
       category: "Intl Stocks",
       defaultTicker: "VEU",
-      customTicker: initialConfig.tickers.intlStocks,
+      customTicker: initialConfig.portfolio.tickers.intlStocks,
     },
     {
       id: "bonds",
       category: "Bonds",
       defaultTicker: "IEF",
-      customTicker: initialConfig.tickers.bonds,
+      customTicker: initialConfig.portfolio.tickers.bonds,
     },
     {
       id: "realEstate",
       category: "Real Estate",
       defaultTicker: "VNQ",
-      customTicker: initialConfig.tickers.realEstate,
+      customTicker: initialConfig.portfolio.tickers.realEstate,
     },
     {
       id: "commodities",
       category: "Commodities",
       defaultTicker: "DBC",
-      customTicker: initialConfig.tickers.commodities,
+      customTicker: initialConfig.portfolio.tickers.commodities,
     },
   ];
 

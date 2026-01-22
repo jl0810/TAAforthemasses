@@ -32,8 +32,8 @@ export function SignalMatrix({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 opacity-50">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-50">
+        {Array.from({ length: 9 }).map((_, i) => (
           <div
             key={i}
             className="glass-card p-5 rounded-3xl h-48 animate-pulse bg-white/5"
@@ -59,35 +59,9 @@ export function SignalMatrix({
             </span>
           </div>
         </div>
-
-        {/* SMA/EMA Toggle */}
-        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-          <button
-            onClick={() => onToggleMA("SMA")}
-            className={cn(
-              "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-widest",
-              maType === "SMA"
-                ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                : "text-white/40 hover:text-white/60",
-            )}
-          >
-            SMA
-          </button>
-          <button
-            onClick={() => onToggleMA("EMA")}
-            className={cn(
-              "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all tracking-widest",
-              maType === "EMA"
-                ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                : "text-white/40 hover:text-white/60",
-            )}
-          >
-            EMA
-          </button>
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {signals.map((signal, idx) => (
           <motion.div
             key={signal.symbol}

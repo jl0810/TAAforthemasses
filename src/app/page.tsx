@@ -9,8 +9,6 @@ import {
   TrendingUp,
   AlertTriangle,
   ArrowUpRight,
-  FlaskConical,
-  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMarketSignals, MarketSignal } from "@/app/actions/market";
@@ -23,21 +21,15 @@ export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [maType, setMaType] = useState<"SMA" | "EMA">("SMA");
+  const [universe, setUniverse] = useState<"ivy" | "sectors">("ivy");
   const [initialConfig, setInitialConfig] =
     useState<UserPreferenceConfig | null>(null);
-  const [isResearchMode, setIsResearchMode] = useState(false);
-  const [rebalanceFreqOverride, setRebalanceFreqOverride] = useState<
-    "Monthly" | "Yearly"
-  >("Monthly");
 
   useEffect(() => {
     async function loadInitialData() {
       try {
         const config = await getUserPreferences();
         setInitialConfig(config);
-        setMaType(config.maType);
-        setRebalanceFreqOverride(config.rebalanceFrequency || "Monthly");
       } catch (e) {
         console.error("Failed to load user preferences:", e);
       }
@@ -46,11 +38,18 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (!initialConfig) return;
+
     async function loadSignals() {
+      if (!initialConfig) return;
       setLoading(true);
       setError(null);
       try {
-        const data = await getMarketSignals(maType);
+        const data = await getMarketSignals(
+          initialConfig.global.maType,
+          initialConfig.global.maLength,
+          universe,
+        );
         setSignals(data);
       } catch (err) {
         console.error("Error loading signals:", err);
@@ -62,7 +61,7 @@ export default function HomePage() {
       }
     }
     loadSignals();
-  }, [maType]);
+  }, [initialConfig, universe]);
 
   const { data: session, isPending: isAuthPending } = useSession();
 
@@ -87,37 +86,28 @@ export default function HomePage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          {/* Research Mode Toggle */}
-          <div className="flex items-center gap-3 self-end">
-            <span
-              className={cn(
-                "text-[10px] font-black uppercase tracking-widest transition-colors",
-                isResearchMode ? "text-indigo-400" : "text-white/20",
-              )}
-            >
-              {isResearchMode ? "Research Active" : "Portfolio Mode"}
-            </span>
+          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 self-end">
             <button
-              onClick={() => setIsResearchMode(!isResearchMode)}
+              onClick={() => setUniverse("ivy")}
               className={cn(
-                "w-12 h-6 rounded-full relative transition-all duration-300 border",
-                isResearchMode
-                  ? "bg-indigo-500/20 border-indigo-500/50"
-                  : "bg-white/5 border-white/10",
+                "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-tighter",
+                universe === "ivy"
+                  ? "bg-white/10 text-white shadow-xl"
+                  : "text-white/30 hover:text-white/60",
               )}
             >
-              <div
-                className={cn(
-                  "absolute top-1 w-4 h-4 rounded-full transition-all duration-300 flex items-center justify-center",
-                  isResearchMode
-                    ? "left-7 bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.5)]"
-                    : "left-1 bg-white/20",
-                )}
-              >
-                {isResearchMode && (
-                  <FlaskConical size={8} className="text-white" />
-                )}
-              </div>
+              Global AA
+            </button>
+            <button
+              onClick={() => setUniverse("sectors")}
+              className={cn(
+                "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-tighter",
+                universe === "sectors"
+                  ? "bg-white/10 text-white shadow-xl"
+                  : "text-white/30 hover:text-white/60",
+              )}
+            >
+              Sectors
             </button>
           </div>
 
@@ -243,44 +233,11 @@ export default function HomePage() {
       </section>
 
       <section className="relative">
-        {isResearchMode && (
-          <div className="absolute -top-12 left-0 right-0 flex justify-center z-10">
-            <div className="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg animate-pulse border border-indigo-400">
-              Simulation Override Active
-            </div>
-          </div>
-        )}
-        <div className="mb-6 flex justify-between items-center">
-          <div />
-          {isResearchMode && (
-            <div className="flex items-center gap-4 bg-white/5 p-1 rounded-2xl border border-white/10">
-              <span className="text-[9px] font-black text-white/20 uppercase tracking-widest pl-3 pr-2">
-                Sim Freq:
-              </span>
-              {(["Monthly", "Yearly"] as const).map((freq) => (
-                <button
-                  key={freq}
-                  onClick={() => setRebalanceFreqOverride(freq)}
-                  className={cn(
-                    "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-tighter",
-                    rebalanceFreqOverride === freq
-                      ? "bg-white/10 text-white shadow-xl"
-                      : "text-white/30 hover:text-white/60",
-                  )}
-                >
-                  {freq}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
         <SignalMatrix
           signals={signals}
           loading={loading}
-          maType={maType}
-          onToggleMA={(type) => {
-            if (isResearchMode) setMaType(type);
-          }}
+          maType={initialConfig?.global.maType || "SMA"}
+          onToggleMA={() => {}}
         />
       </section>
 
@@ -353,7 +310,8 @@ export default function HomePage() {
               .slice(0, 2)
               .map((s) => s.name)
               .join(" and ") || "Cash"}
-            . Trend shifts are tracked via {maType} filters for timely defensive
+            . Trend shifts are tracked via{" "}
+            {initialConfig?.global.maType || "SMA"} filters for timely defensive
             rotation.
           </p>
           <a
@@ -366,17 +324,7 @@ export default function HomePage() {
       </section>
 
       <section>
-        {initialConfig && (
-          <StrategyComparison
-            initialConfig={{
-              ...initialConfig,
-              rebalanceFrequency: isResearchMode
-                ? rebalanceFreqOverride
-                : initialConfig.rebalanceFrequency,
-              maType: isResearchMode ? maType : initialConfig.maType,
-            }}
-          />
-        )}
+        {initialConfig && <StrategyComparison initialConfig={initialConfig} />}
       </section>
     </div>
   );

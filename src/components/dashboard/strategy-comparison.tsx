@@ -28,7 +28,7 @@ export function StrategyComparison({
     try {
       const data = await runBacktest({
         lookbackYears: lookback,
-        rebalanceFrequency: initialConfig.rebalanceFrequency,
+        rebalanceFrequency: initialConfig.portfolio.rebalanceFrequency,
       });
       if (data.error) {
         setError(data.error);
@@ -42,7 +42,7 @@ export function StrategyComparison({
     } finally {
       setLoading(false);
     }
-  }, [lookback, initialConfig.rebalanceFrequency]);
+  }, [lookback, initialConfig.portfolio.rebalanceFrequency]);
 
   useEffect(() => {
     loadData();
@@ -71,7 +71,8 @@ export function StrategyComparison({
             Performance Delta
           </h2>
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">
-            Strategy vs {initialConfig.tickers.benchmark || "AOR"} Benchmark
+            Strategy vs {initialConfig.portfolio.tickers.benchmark || "AOR"}{" "}
+            Benchmark
           </p>
         </div>
 

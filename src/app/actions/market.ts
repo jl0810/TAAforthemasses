@@ -81,6 +81,18 @@ const DEFAULT_IVY_5 = [
   { id: "commodities", symbol: "DBC", name: "Commodities" },
 ];
 
+const SECTOR_UNIVERSE = [
+  { id: "xlk", symbol: "XLK", name: "Technology" },
+  { id: "xlv", symbol: "XLV", name: "Health Care" },
+  { id: "xly", symbol: "XLY", name: "Cons. Disc." },
+  { id: "xlp", symbol: "XLP", name: "Cons. Staples" },
+  { id: "xle", symbol: "XLE", name: "Energy" },
+  { id: "xlf", symbol: "XLF", name: "Financials" },
+  { id: "xli", symbol: "XLI", name: "Industrials" },
+  { id: "xlb", symbol: "XLB", name: "Materials" },
+  { id: "xlu", symbol: "XLU", name: "Utilities" },
+];
+
 function getMonthEndPrices(prices: Array<{ date: Date; adjClose: number }>) {
   const monthlyMap = new Map<string, { date: Date; adjClose: number }>();
   prices.forEach((p) => {
@@ -98,17 +110,31 @@ function getMonthEndPrices(prices: Array<{ date: Date; adjClose: number }>) {
 export async function getMarketSignals(
   maTypeArg?: "SMA" | "EMA",
   maLengthArg?: number,
+  universe: "ivy" | "sectors" = "ivy",
 ): Promise<MarketSignal[]> {
   const preferences = await getUserPreferences();
-  const maType = maTypeArg || preferences.maType;
-  const maLength = maLengthArg || preferences.maLength;
+  const maType =
+    maTypeArg || preferences.portfolio.maType || preferences.global.maType;
+  const maLength =
+    maLengthArg ||
+    preferences.portfolio.maLength ||
+    preferences.global.maLength;
 
-  const assets = DEFAULT_IVY_5.map((asset) => ({
-    ...asset,
-    symbol:
-      preferences.tickers[asset.id as keyof typeof preferences.tickers] ||
-      asset.symbol,
-  }));
+  const baseAssets = universe === "sectors" ? SECTOR_UNIVERSE : DEFAULT_IVY_5;
+
+  const assets = baseAssets.map((asset) => {
+    // Only apply tickers override for Ivy 5 portfolio assets
+    if (universe === "ivy") {
+      const override =
+        preferences.portfolio.tickers[
+          asset.id as keyof typeof preferences.portfolio.tickers
+        ];
+      if (override) {
+        return { ...asset, symbol: override };
+      }
+    }
+    return asset;
+  });
 
   const signals = await Promise.all(
     assets.map(async (asset) => {
@@ -257,20 +283,31 @@ export async function runBacktest(params?: {
 }): Promise<BacktestResult> {
   try {
     const preferences = await getUserPreferences();
-    const maType = params?.maType || preferences.maType;
-    const maLength = params?.maLength || preferences.maLength;
-    const concentration = params?.concentration || preferences.concentration;
+    const maType =
+      params?.maType ||
+      preferences.portfolio.maType ||
+      preferences.global.maType;
+    const maLength =
+      params?.maLength ||
+      preferences.portfolio.maLength ||
+      preferences.global.maLength;
+    const concentration =
+      params?.concentration || preferences.global.concentration;
     const rebalanceFrequency =
-      params?.rebalanceFrequency || preferences.rebalanceFrequency || "Monthly";
+      params?.rebalanceFrequency ||
+      preferences.portfolio.rebalanceFrequency ||
+      preferences.global.rebalanceFrequency ||
+      "Monthly";
     const lookbackYears = params?.lookbackYears || 10;
 
     const assets = DEFAULT_IVY_5.map(
       (asset) =>
-        preferences.tickers[asset.id as keyof typeof preferences.tickers] ||
-        asset.symbol,
+        preferences.portfolio.tickers[
+          asset.id as keyof typeof preferences.portfolio.tickers
+        ] || asset.symbol,
     );
     const benchmarkTicker =
-      params?.benchmark || preferences.tickers.benchmark || "AOR";
+      params?.benchmark || preferences.portfolio.tickers.benchmark || "AOR";
     const allTickers = [...assets, benchmarkTicker];
     const startDate = new Date();
     startDate.setFullYear(startDate.getFullYear() - (lookbackYears + 4));

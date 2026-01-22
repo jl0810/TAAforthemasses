@@ -7,36 +7,48 @@ import { userSignals } from "@/db/schema/tables";
 import { revalidatePath } from "next/cache";
 
 export interface UserPreferenceConfig {
-  tickers: {
-    usStocks: string;
-    intlStocks: string;
-    bonds: string;
-    realEstate: string;
-    commodities: string;
-    benchmark: string;
+  portfolio: {
+    tickers: {
+      usStocks: string;
+      intlStocks: string;
+      bonds: string;
+      realEstate: string;
+      commodities: string;
+      benchmark: string;
+    };
+    strategyStartDate?: string;
+    rebalanceFrequency?: "Monthly" | "Yearly";
+    maType?: "SMA" | "EMA";
+    maLength?: 10 | 12;
   };
-  maType: "SMA" | "EMA";
-  maLength: 10 | 12;
-  concentration: number;
-  strategyStartDate?: string;
-  rebalanceFrequency: "Monthly" | "Yearly";
+  global: {
+    maType: "SMA" | "EMA";
+    maLength: 10 | 12;
+    concentration: number;
+    rebalanceFrequency: "Monthly" | "Yearly";
+  };
 }
 
 // Official Ivy Portfolio from Advisor Perspectives
 const DEFAULT_CONFIG: UserPreferenceConfig = {
-  tickers: {
-    usStocks: "VTI", // Vanguard Total Stock Market
-    intlStocks: "VEU", // Vanguard FTSE All-World ex-US
-    bonds: "IEF", // iShares 7-10 Year Treasury
-    realEstate: "VNQ", // Vanguard Real Estate
-    commodities: "DBC", // Invesco DB Commodity Index
-    benchmark: "AOR", // Default to Growth (60/40 approx)
+  portfolio: {
+    tickers: {
+      usStocks: "VTI",
+      intlStocks: "VEU",
+      bonds: "IEF",
+      realEstate: "VNQ",
+      commodities: "DBC",
+      benchmark: "AOR",
+    },
+    strategyStartDate: "2026-01-01",
+    rebalanceFrequency: "Monthly",
   },
-  maType: "SMA",
-  maLength: 10,
-  concentration: 5,
-  strategyStartDate: "2026-01-01",
-  rebalanceFrequency: "Monthly",
+  global: {
+    maType: "SMA",
+    maLength: 10,
+    concentration: 5,
+    rebalanceFrequency: "Monthly",
+  },
 };
 
 export async function getUserPreferences(): Promise<UserPreferenceConfig> {
@@ -50,7 +62,26 @@ export async function getUserPreferences(): Promise<UserPreferenceConfig> {
   if (!userSignal?.config) return DEFAULT_CONFIG;
 
   try {
-    return JSON.parse(userSignal.config) as UserPreferenceConfig;
+    const rawConfig = JSON.parse(userSignal.config);
+
+    // Migration logic for old flat structure
+    if (rawConfig.tickers && !rawConfig.portfolio) {
+      return {
+        portfolio: {
+          tickers: rawConfig.tickers,
+          strategyStartDate: rawConfig.strategyStartDate,
+          rebalanceFrequency: rawConfig.rebalanceFrequency || "Monthly",
+        },
+        global: {
+          maType: rawConfig.maType || "SMA",
+          maLength: rawConfig.maLength || 10,
+          concentration: rawConfig.concentration || 5,
+          rebalanceFrequency: rawConfig.rebalanceFrequency || "Monthly",
+        },
+      };
+    }
+
+    return rawConfig as UserPreferenceConfig;
   } catch (e) {
     console.error("Failed to parse user config", e);
     return DEFAULT_CONFIG;

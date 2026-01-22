@@ -45,188 +45,319 @@ export function ProfileSettings({ initialConfig, availableETFs }: Props) {
 
   return (
     <form onSubmit={handleSave} className="space-y-8">
-      <div className="glass-card p-8 rounded-3xl border border-white/10">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-white mb-2">
-            Strategy Configuration
+      {/* Portfolio Settings */}
+      <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 bg-white/[0.02]">
+        <div className="mb-8">
+          <h2 className="text-2xl font-black font-outfit text-white tracking-tighter mb-2">
+            My TAA Portfolio
           </h2>
           <p className="text-white/40 text-sm">
-            Select the ETFs for each asset class in the Ivy 5 strategy.
+            Configure your official tracking tokens and rebalance schedule.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-8 border-b border-white/5">
           <SelectGroup
             label="US Stocks"
-            value={config.tickers.usStocks}
+            value={config.portfolio.tickers.usStocks}
             etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
-                tickers: { ...config.tickers, usStocks: v },
+                portfolio: {
+                  ...config.portfolio,
+                  tickers: { ...config.portfolio.tickers, usStocks: v },
+                },
               })
             }
           />
           <SelectGroup
             label="Intl Stocks"
-            value={config.tickers.intlStocks}
+            value={config.portfolio.tickers.intlStocks}
             etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
-                tickers: { ...config.tickers, intlStocks: v },
+                portfolio: {
+                  ...config.portfolio,
+                  tickers: { ...config.portfolio.tickers, intlStocks: v },
+                },
               })
             }
           />
           <SelectGroup
             label="Bonds"
-            value={config.tickers.bonds}
-            etfsByCategory={etfsByCategory}
-            onChange={(v) =>
-              setConfig({ ...config, tickers: { ...config.tickers, bonds: v } })
-            }
-          />
-          <SelectGroup
-            label="Real Estate"
-            value={config.tickers.realEstate}
+            value={config.portfolio.tickers.bonds}
             etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
-                tickers: { ...config.tickers, realEstate: v },
+                portfolio: {
+                  ...config.portfolio,
+                  tickers: { ...config.portfolio.tickers, bonds: v },
+                },
+              })
+            }
+          />
+          <SelectGroup
+            label="Real Estate"
+            value={config.portfolio.tickers.realEstate}
+            etfsByCategory={etfsByCategory}
+            onChange={(v) =>
+              setConfig({
+                ...config,
+                portfolio: {
+                  ...config.portfolio,
+                  tickers: { ...config.portfolio.tickers, realEstate: v },
+                },
               })
             }
           />
           <SelectGroup
             label="Commodities"
-            value={config.tickers.commodities}
+            value={config.portfolio.tickers.commodities}
             etfsByCategory={etfsByCategory}
             onChange={(v) =>
               setConfig({
                 ...config,
-                tickers: { ...config.tickers, commodities: v },
+                portfolio: {
+                  ...config.portfolio,
+                  tickers: { ...config.portfolio.tickers, commodities: v },
+                },
+              })
+            }
+          />
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Portfolio Rebalance
+            </label>
+            <select
+              value={config.portfolio.rebalanceFrequency || ""}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  portfolio: {
+                    ...config.portfolio,
+                    rebalanceFrequency: e.target.value as
+                      | "Monthly"
+                      | "Yearly"
+                      | undefined,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value="">
+                Global Default ({config.global.rebalanceFrequency})
+              </option>
+              <option value="Monthly">Monthly Reset</option>
+              <option value="Yearly">Yearly (Drift)</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Portfolio Trend Logic
+            </label>
+            <select
+              value={config.portfolio.maType || ""}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  portfolio: {
+                    ...config.portfolio,
+                    maType: (e.target.value as "SMA" | "EMA") || undefined,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value="">Global Default ({config.global.maType})</option>
+              <option value="SMA">SMA (Simple)</option>
+              <option value="EMA">EMA (Exponential)</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Portfolio Lookback
+            </label>
+            <select
+              value={config.portfolio.maLength || ""}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  portfolio: {
+                    ...config.portfolio,
+                    maLength: e.target.value
+                      ? (parseInt(e.target.value) as 10 | 12)
+                      : undefined,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value="">
+                Global Default ({config.global.maLength}M)
+              </option>
+              <option value={10}>10 Months</option>
+              <option value={12}>12 Months</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Strategy Start Date
+            </label>
+            <input
+              type="date"
+              value={config.portfolio.strategyStartDate || ""}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  portfolio: {
+                    ...config.portfolio,
+                    strategyStartDate: e.target.value,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            />
+          </div>
+          <SelectGroup
+            label="Portfolio Benchmark"
+            value={config.portfolio.tickers.benchmark}
+            etfsByCategory={etfsByCategory}
+            onChange={(v) =>
+              setConfig({
+                ...config,
+                portfolio: {
+                  ...config.portfolio,
+                  tickers: { ...config.portfolio.tickers, benchmark: v },
+                },
               })
             }
           />
         </div>
+      </div>
 
-        <div className="mt-8">
-          <h3 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-            Default Strategy Logic
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
-                Methodology
-              </label>
-              <select
-                value={config.maType}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
+      {/* Global Research Settings */}
+      <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 bg-indigo-500/[0.02]">
+        <div className="mb-8">
+          <h2 className="text-2xl font-black font-outfit text-white tracking-tighter mb-2">
+            Global Research Defaults
+          </h2>
+          <p className="text-white/40 text-sm">
+            Default parameters used across the site for signals and research
+            simulation.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              MA Methodology
+            </label>
+            <select
+              value={config.global.maType}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  global: {
+                    ...config.global,
                     maType: e.target.value as "SMA" | "EMA",
-                  })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-              >
-                <option value="SMA">SMA (Simple)</option>
-                <option value="EMA">EMA (Exponential)</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
-                Lookback
-              </label>
-              <select
-                value={config.maLength}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value="SMA">SMA (Simple)</option>
+              <option value="EMA">EMA (Exponential)</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Lookback
+            </label>
+            <select
+              value={config.global.maLength}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  global: {
+                    ...config.global,
                     maLength: parseInt(e.target.value) as 10 | 12,
-                  })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-              >
-                <option value={10}>10 Months</option>
-                <option value={12}>12 Months</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
-                Concentration
-              </label>
-              <select
-                value={config.concentration}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value={10}>10 Months</option>
+              <option value={12}>12 Months</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Concentration
+            </label>
+            <select
+              value={config.global.concentration}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  global: {
+                    ...config.global,
                     concentration: parseInt(e.target.value),
-                  })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-              >
-                <option value={1}>Top 1 Asset</option>
-                <option value={2}>Top 2 Assets</option>
-                <option value={3}>Top 3 Assets</option>
-                <option value={5}>Top 5 (Equal)</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
-                Benchmark
-              </label>
-              <select
-                value={config.tickers.benchmark}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    tickers: { ...config.tickers, benchmark: e.target.value },
-                  })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-              >
-                <option value="AOK">Conservative (AOK)</option>
-                <option value="AOM">Moderate (AOM)</option>
-                <option value="AOR">Growth (AOR)</option>
-                <option value="AOA">Aggressive (AOA)</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
-                Rebalance
-              </label>
-              <select
-                value={config.rebalanceFrequency}
-                onChange={(e) =>
-                  setConfig({
-                    ...config,
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value={1}>Top 1 Asset</option>
+              <option value={2}>Top 2 Assets</option>
+              <option value={3}>Top 3 Assets</option>
+              <option value={5}>Top 5 (Equal)</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+              Simulation Rebalance
+            </label>
+            <select
+              value={config.global.rebalanceFrequency}
+              onChange={(e) =>
+                setConfig({
+                  ...config,
+                  global: {
+                    ...config.global,
                     rebalanceFrequency: e.target.value as "Monthly" | "Yearly",
-                  })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
-              >
-                <option value="Monthly">Monthly Reset</option>
-                <option value="Yearly">Yearly (Drift)</option>
-              </select>
-            </div>
+                  },
+                })
+              }
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+            >
+              <option value="Monthly">Monthly Reset</option>
+              <option value="Yearly">Yearly (Drift)</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        <div className="mt-8 flex justify-end">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <Save size={18} />
-            )}
-            Save Changes
-          </button>
-        </div>
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center gap-3 bg-indigo-500 hover:bg-indigo-400 text-white font-black text-sm uppercase tracking-tighter py-4 px-10 rounded-2xl transition-all disabled:opacity-50 shadow-xl shadow-indigo-500/20"
+        >
+          {loading ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Save size={18} />
+          )}
+          Save All Preferences
+        </button>
       </div>
     </form>
   );

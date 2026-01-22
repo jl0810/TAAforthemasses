@@ -31,7 +31,7 @@ export default async function CommandPage() {
 
       <AllocationCalculator
         signals={signals}
-        strategyStartDate={preferences.strategyStartDate}
+        strategyStartDate={preferences.portfolio.strategyStartDate}
       />
     </div>
   );
