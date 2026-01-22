@@ -44,6 +44,12 @@ const UNIVERSE = [
   "TLT",
   "IEF",
   "SHY",
+
+  // Benchmarks (Risk-Profiled Core Series)
+  "AOK", // Conservative
+  "AOM", // Moderate
+  "AOR", // Growth
+  "AOA", // Aggressive
 ];
 
 async function main() {

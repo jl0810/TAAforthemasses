@@ -129,23 +129,9 @@ export function calculateTotalReturn(
 }
 
 /**
- * Sharpe Ratio
- */
-export function calculateSharpeRatio(
-  returns: number[],
-  riskFreeRate: number = 0.04,
-): number {
-  if (returns.length === 0) return 0;
-  const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-  const stdDev = calculateStandardDeviation(returns);
-  if (stdDev === 0) return 0;
-  return (avgReturn - riskFreeRate / 12) / stdDev;
-}
-
-/**
  * Standard Deviation
  */
-function calculateStandardDeviation(values: number[]): number {
+export function calculateStandardDeviation(values: number[]): number {
   if (values.length === 0) return 0;
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
   const squareDiffs = values.map((v) => Math.pow(v - avg, 2));
@@ -154,17 +140,72 @@ function calculateStandardDeviation(values: number[]): number {
 }
 
 /**
- * Sortino Ratio
+ * Sharpe Ratio (Annualized)
+ * (Avg Monthly Return - Risk Free Rate / 12) / StdDev * sqrt(12)
+ */
+export function calculateSharpeRatio(
+  returns: number[],
+  riskFreeRate: number = 0.04,
+): number {
+  if (returns.length === 0) return 0;
+  const monthlyRf = riskFreeRate / 12;
+  const excessReturns = returns.map((r) => r / 100 - monthlyRf);
+  const avgExcess = excessReturns.reduce((a, b) => a + b, 0) / returns.length;
+  const stdDev = calculateStandardDeviation(excessReturns);
+
+  if (stdDev === 0) return 0;
+  return (avgExcess / stdDev) * Math.sqrt(12);
+}
+
+/**
+ * Sortino Ratio (Annualized)
+ * (Avg Monthly Return - Risk Free Rate / 12) / DownsideDev * sqrt(12)
  */
 export function calculateSortinoRatio(
   returns: number[],
   riskFreeRate: number = 0.04,
 ): number {
   if (returns.length === 0) return 0;
-  const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
-  const negativeReturns = returns.filter((r) => r < 0);
-  if (negativeReturns.length === 0) return 0;
-  const downsideDev = calculateStandardDeviation(negativeReturns);
+  const monthlyRf = riskFreeRate / 12;
+  const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length / 100;
+
+  const downsideDiffs = returns.map((r) => {
+    const diff = r / 100 - monthlyRf;
+    return diff < 0 ? Math.pow(diff, 2) : 0;
+  });
+
+  const downsideDev = Math.sqrt(
+    downsideDiffs.reduce((a, b) => a + b, 0) / returns.length,
+  );
+
   if (downsideDev === 0) return 0;
-  return (avgReturn - riskFreeRate / 12) / downsideDev;
+  return ((avgReturn - monthlyRf) / downsideDev) * Math.sqrt(12);
+}
+
+/**
+ * Max Drawdown (%)
+ */
+export function calculateMaxDrawdown(prices: number[]): number {
+  if (prices.length === 0) return 0;
+  let maxDd = 0;
+  let peak = -Infinity;
+
+  for (const price of prices) {
+    if (price > peak) peak = price;
+    const dd = ((peak - price) / peak) * 100;
+    if (dd > maxDd) maxDd = dd;
+  }
+
+  return maxDd;
+}
+
+/**
+ * Annualized Return (CAGR/Geometric Mean)
+ */
+export function calculateAnnualizedReturn(returns: number[]): number {
+  if (returns.length === 0) return 0;
+  // returns are in percentage (e.g. 1.5 for 1.5%)
+  const growth = returns.reduce((acc, r) => acc * (1 + r / 100), 1);
+  const years = returns.length / 12;
+  return (Math.pow(growth, 1 / years) - 1) * 100;
 }

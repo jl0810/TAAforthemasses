@@ -14,12 +14,29 @@ import { cn } from "@/lib/utils";
 import { getMarketSignals, MarketSignal } from "@/app/actions/market";
 import { useSession } from "@/lib/auth-client";
 import { LandingHero } from "@/components/dashboard/landing-hero";
+import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
+import { getUserPreferences, UserPreferenceConfig } from "@/app/actions/user";
 
 export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [maType, setMaType] = useState<"SMA" | "EMA">("SMA");
+  const [initialConfig, setInitialConfig] =
+    useState<UserPreferenceConfig | null>(null);
+
+  useEffect(() => {
+    async function loadInitialData() {
+      try {
+        const config = await getUserPreferences();
+        setInitialConfig(config);
+        setMaType(config.maType);
+      } catch (e) {
+        console.error("Failed to load user preferences:", e);
+      }
+    }
+    loadInitialData();
+  }, []);
 
   useEffect(() => {
     async function loadSignals() {
@@ -28,10 +45,10 @@ export default function HomePage() {
       try {
         const data = await getMarketSignals(maType);
         setSignals(data);
-      } catch (error) {
-        console.error("Error loading signals:", error);
+      } catch (err) {
+        console.error("Error loading signals:", err);
         setError(
-          error instanceof Error ? error.message : "Failed to load market data",
+          err instanceof Error ? err.message : "Failed to load market data",
         );
       } finally {
         setLoading(false);
@@ -40,21 +57,17 @@ export default function HomePage() {
     loadSignals();
   }, [maType]);
 
-  // Auth State
   const { data: session, isPending: isAuthPending } = useSession();
 
-  // Aggregate Risk Level
   const riskOnCount = signals.filter((s) => s.status === "Risk-On").length;
   const isMarketStrong = riskOnCount >= 3;
 
-  // Show Marketing Page if not logged in
   if (!isAuthPending && !session) {
     return <LandingHero />;
   }
 
   return (
     <div className="space-y-10 pb-10">
-      {/* Header / Hero */}
       <section className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div>
           <h1 className="text-4xl md:text-5xl font-black font-outfit tracking-tighter text-white">
@@ -66,7 +79,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Global Regime Indicator */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -124,7 +136,6 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Stats Quickbar */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
@@ -188,7 +199,6 @@ export default function HomePage() {
         })}
       </section>
 
-      {/* Main Signal Matrix */}
       <section>
         <SignalMatrix
           signals={signals}
@@ -198,7 +208,6 @@ export default function HomePage() {
         />
       </section>
 
-      {/* Momentum Leaderboard */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-5">
@@ -262,19 +271,26 @@ export default function HomePage() {
             Strategic Insight
           </h3>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            The current regime is dominant in{" "}
+            Current regime monitoring in{" "}
             {signals
               .filter((s) => s.status === "Risk-On")
               .slice(0, 2)
               .map((s) => s.name)
-              .join(" and ")}
-            . Fixed income components are monitored for trend shifts to pivot
-            into safety assets.
+              .join(" and ") || "Cash"}
+            . Trend shifts are tracked via {maType} filters for timely defensive
+            rotation.
           </p>
-          <button className="w-full py-4 rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-sm transition-all shadow-xl shadow-indigo-500/20 tracking-tighter uppercase">
+          <a
+            href="/playground"
+            className="block w-full py-4 text-center rounded-2xl bg-indigo-500 hover:bg-indigo-400 text-white font-bold text-sm transition-all shadow-xl shadow-indigo-500/20 tracking-tighter uppercase"
+          >
             Optimization Lab
-          </button>
+          </a>
         </div>
+      </section>
+
+      <section>
+        {initialConfig && <StrategyComparison initialConfig={initialConfig} />}
       </section>
     </div>
   );

@@ -10,10 +10,14 @@ export interface UserPreferenceConfig {
   tickers: {
     usStocks: string;
     intlStocks: string;
-    bonds: string; // Renamed from usBonds for clarity
+    bonds: string;
     realEstate: string;
     commodities: string;
+    benchmark: string;
   };
+  maType: "SMA" | "EMA";
+  maLength: 10 | 12;
+  concentration: number;
 }
 
 // Official Ivy Portfolio from Advisor Perspectives
@@ -24,7 +28,11 @@ const DEFAULT_CONFIG: UserPreferenceConfig = {
     bonds: "IEF", // iShares 7-10 Year Treasury
     realEstate: "VNQ", // Vanguard Real Estate
     commodities: "DBC", // Invesco DB Commodity Index
+    benchmark: "AOR", // Default to Growth (60/40 approx)
   },
+  maType: "SMA",
+  maLength: 10,
+  concentration: 5,
 };
 
 export async function getUserPreferences(): Promise<UserPreferenceConfig> {
@@ -109,6 +117,11 @@ const ETF_METADATA: Record<string, { name: string; category: string }> = {
   VUG: { name: "Vanguard Growth", category: "Factor" },
   USMV: { name: "iShares Min Vol USA", category: "Factor" },
   QUAL: { name: "iShares MSCI USA Quality", category: "Factor" },
+  // Benchmarks
+  AOK: { name: "iShares Conservative Allocation", category: "Benchmark" },
+  AOM: { name: "iShares Moderate Allocation", category: "Benchmark" },
+  AOR: { name: "iShares Growth Allocation", category: "Benchmark" },
+  AOA: { name: "iShares Aggressive Allocation", category: "Benchmark" },
 };
 
 export interface AvailableETF {

@@ -2,9 +2,11 @@ import React from "react";
 import { FlaskConical } from "lucide-react";
 import { StrategyLab } from "@/components/dashboard/strategy-lab";
 import { requireAuth } from "@/lib/auth";
+import { getUserPreferences } from "@/app/actions/user";
 
 export default async function LabPage() {
   await requireAuth();
+  const preferences = await getUserPreferences();
   return (
     <div className="space-y-10 pb-20">
       {/* Hero Header */}
@@ -24,7 +26,7 @@ export default async function LabPage() {
         </p>
       </section>
 
-      <StrategyLab />
+      <StrategyLab initialConfig={preferences} />
     </div>
   );
 }

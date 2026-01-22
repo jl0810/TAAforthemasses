@@ -175,13 +175,52 @@ export function SignalMatrix({
               <X size={24} />
             </button>
 
-            <div className="mb-8">
-              <h3 className="text-3xl font-black font-outfit text-white tracking-tighter">
-                {selectedAsset.symbol} History
-              </h3>
-              <p className="text-white/40 text-sm mt-1">
-                Last 12 Monthly Trend Signals ({maType}-10)
-              </p>
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <h3 className="text-3xl font-black font-outfit text-white tracking-tighter">
+                  {selectedAsset.symbol} History
+                </h3>
+                <p className="text-white/40 text-sm mt-1">
+                  Last 12 Monthly Trend Signals ({maType}-10)
+                </p>
+              </div>
+
+              {selectedAsset.performance && (
+                <div className="grid grid-cols-4 gap-4 bg-white/5 p-4 rounded-3xl border border-white/5">
+                  <div className="text-center">
+                    <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
+                      Sharpe
+                    </div>
+                    <div className="text-sm font-black text-indigo-400">
+                      {selectedAsset.performance.sharpeRatio.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="text-center border-x border-white/10 px-4">
+                    <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
+                      Sortino
+                    </div>
+                    <div className="text-sm font-black text-emerald-400">
+                      {selectedAsset.performance.sortinoRatio.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="text-center border-r border-white/10 pr-4">
+                    <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
+                      CAGR
+                    </div>
+                    <div className="text-sm font-black text-white">
+                      {selectedAsset.performance.cagr.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest mb-1">
+                      Max DD
+                    </div>
+                    <div className="text-sm font-black text-rose-400">
+                      -{selectedAsset.performance.maxDrawdown.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">

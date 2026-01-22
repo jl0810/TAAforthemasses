@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
-import { FlaskConical, Plus, Search, Zap, Layers } from "lucide-react";
+import { Zap, Layers, Loader2, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { runBacktest, BacktestResult } from "@/app/actions/market";
+import { UserPreferenceConfig } from "@/app/actions/user";
 
 interface AssetMap {
   id: string;
@@ -12,87 +14,116 @@ interface AssetMap {
   customTicker: string;
 }
 
-const DEFAULT_ASSETS: AssetMap[] = [
-  { id: "1", category: "US Stocks", defaultTicker: "VTI", customTicker: "VTI" },
-  {
-    id: "2",
-    category: "Foreign Stocks",
-    defaultTicker: "VEA",
-    customTicker: "VEA",
-  },
-  { id: "3", category: "Bonds", defaultTicker: "BND", customTicker: "BND" },
-  {
-    id: "4",
-    category: "Real Estate",
-    defaultTicker: "VNQ",
-    customTicker: "VNQ",
-  },
-  {
-    id: "5",
-    category: "Commodities",
-    defaultTicker: "GSG",
-    customTicker: "GSG",
-  },
-];
+export function StrategyLab({
+  initialConfig,
+}: {
+  initialConfig: UserPreferenceConfig;
+}) {
+  const [concentration, setConcentration] = useState(
+    initialConfig.concentration,
+  );
+  const [maType, setMaType] = useState<"SMA" | "EMA">(initialConfig.maType);
+  const [maLength, setMaLength] = useState<10 | 12>(initialConfig.maLength);
+  const [benchmark, setBenchmark] = useState(
+    initialConfig.tickers.benchmark || "AOR",
+  );
 
-export function StrategyLab() {
-  const [assets, setAssets] = useState<AssetMap[]>(DEFAULT_ASSETS);
-  const [concentration, setConcentration] = useState(5); // Equal weight vs Top N
+  const assets: AssetMap[] = [
+    {
+      id: "usStocks",
+      category: "US Stocks",
+      defaultTicker: "VTI",
+      customTicker: initialConfig.tickers.usStocks,
+    },
+    {
+      id: "intlStocks",
+      category: "Intl Stocks",
+      defaultTicker: "VEU",
+      customTicker: initialConfig.tickers.intlStocks,
+    },
+    {
+      id: "bonds",
+      category: "Bonds",
+      defaultTicker: "IEF",
+      customTicker: initialConfig.tickers.bonds,
+    },
+    {
+      id: "realEstate",
+      category: "Real Estate",
+      defaultTicker: "VNQ",
+      customTicker: initialConfig.tickers.realEstate,
+    },
+    {
+      id: "commodities",
+      category: "Commodities",
+      defaultTicker: "DBC",
+      customTicker: initialConfig.tickers.commodities,
+    },
+  ];
 
-  const updateTicker = (id: string, value: string) => {
-    setAssets(
-      assets.map((a) =>
-        a.id === id ? { ...a, customTicker: value.toUpperCase() } : a,
-      ),
-    );
-  };
+  const [results, setResults] = useState<BacktestResult | null>(null);
+  const [calculating, setCalculating] = useState(false);
 
-  const mockBars = useMemo(() => {
-    return Array.from({ length: 40 }).map(
-      (_, i) => Math.sin(i * 0.2) * 50 + 40 + (i % 5) * 4,
-    );
-  }, []);
+  const loadBacktest = useCallback(async () => {
+    setCalculating(true);
+    try {
+      const data = await runBacktest({
+        maType,
+        maLength,
+        concentration,
+        benchmark,
+        lookbackYears: 10,
+      });
+      setResults(data);
+    } catch (error) {
+      console.error("Backtest failed:", error);
+    } finally {
+      setCalculating(false);
+    }
+  }, [maType, maLength, concentration, benchmark]);
+
+  useEffect(() => {
+    loadBacktest();
+  }, [loadBacktest]);
+
+  const equityMax = useMemo(() => {
+    if (!results) return 0;
+    const stratMax = Math.max(...results.equityCurve.map((e) => e.value));
+    const benchMax = Math.max(...results.benchmarkCurve.map((e) => e.value));
+    return Math.max(stratMax, benchMax);
+  }, [results]);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-      {/* Left: Ticker Mapping & Concentration */}
+      {/* Left: Configuration */}
       <div className="space-y-8">
         <div className="glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Layers size={20} className="text-indigo-400" />
-              Asset Mapping
+              Asset Universe
             </h2>
-            <button className="p-2 rounded-xl bg-white/5 text-white/40 hover:text-white/80 transition-all">
-              <Plus size={20} />
+            <button className="text-[10px] uppercase font-black tracking-widest text-white/20">
+              Ivy 5 Core
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 opacity-80">
             {assets.map((asset) => (
               <div
                 key={asset.id}
-                className="flex flex-col md:flex-row md:items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5"
+                className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5"
               >
-                <div className="flex-1">
-                  <div className="text-[10px] font-black uppercase text-white/30 tracking-widest mb-1">
+                <div>
+                  <div className="text-[10px] font-black uppercase text-white/30 tracking-widest">
                     {asset.category}
                   </div>
                   <div className="text-sm font-bold text-white/80">
-                    Default: {asset.defaultTicker}
+                    {asset.customTicker}
                   </div>
                 </div>
-                <div className="relative flex-1">
-                  <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20"
-                    size={16}
-                  />
-                  <input
-                    className="w-full bg-black/20 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500/50 text-white"
-                    value={asset.customTicker}
-                    onChange={(e) => updateTicker(asset.id, e.target.value)}
-                    placeholder="Enter Ticker..."
-                  />
+                <div className="text-[10px] text-white/20 font-mono italic">
+                  Primary Mapping
                 </div>
               </div>
             ))}
@@ -100,35 +131,101 @@ export function StrategyLab() {
         </div>
 
         <div className="glass-card p-8 rounded-[2.5rem]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white">
-              Concentration Controls
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Settings2 size={20} className="text-indigo-400" />
+              Strategy Engine
             </h2>
-            <div className="text-xs font-mono text-indigo-400 font-bold bg-indigo-500/10 px-3 py-1 rounded-full uppercase">
-              Current: Top {concentration}
-            </div>
           </div>
-          <p className="text-xs text-white/40 mb-8 leading-relaxed">
-            Filter for only the highest-conviction momentum leaders. Focusing on
-            the Top 3 instead of the full Ivy 5 often yields higher Sharpe
-            ratios during bull phases.
-          </p>
 
-          <div className="flex items-center gap-4">
-            {[1, 2, 3, 5].map((val) => (
-              <button
-                key={val}
-                onClick={() => setConcentration(val)}
-                className={cn(
-                  "flex-1 py-4 rounded-2xl font-black text-sm transition-all border",
-                  concentration === val
-                    ? "bg-indigo-500 text-white border-indigo-400 shadow-xl shadow-indigo-500/20 scale-105"
-                    : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10",
-                )}
+          <div className="space-y-8">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                  Trend Logic
+                </label>
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                  {(["SMA", "EMA"] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setMaType(type)}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                        maType === type
+                          ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                          : "text-white/40 hover:text-white/60",
+                      )}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                  Time Window
+                </label>
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                  {([10, 12] as const).map((val) => (
+                    <button
+                      key={val}
+                      onClick={() => setMaLength(val)}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                        maLength === val
+                          ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20"
+                          : "text-white/40 hover:text-white/60",
+                      )}
+                    >
+                      {val}M
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                  Momentum Concentration
+                </label>
+                <div className="text-xs font-mono text-indigo-400 font-bold bg-indigo-500/10 px-3 py-1 rounded-full">
+                  TOP {concentration}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 5].map((val) => (
+                  <button
+                    key={val}
+                    onClick={() => setConcentration(val)}
+                    className={cn(
+                      "flex-1 py-4 rounded-2xl font-black text-sm transition-all border",
+                      concentration === val
+                        ? "bg-indigo-500 text-white border-indigo-400 shadow-xl shadow-indigo-500/20"
+                        : "bg-white/5 text-white/40 border-white/5 hover:bg-white/10",
+                    )}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-white/5">
+              <label className="text-[10px] font-black uppercase text-white/30 tracking-widest">
+                Comparison Benchmark
+              </label>
+              <select
+                value={benchmark}
+                onChange={(e) => setBenchmark(e.target.value)}
+                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white/80 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 appearance-none cursor-pointer"
               >
-                Top {val}
-              </button>
-            ))}
+                <option value="AOK">Conservative (AOK)</option>
+                <option value="AOM">Moderate (AOM)</option>
+                <option value="AOR">Growth (AOR)</option>
+                <option value="AOA">Aggressive (AOA)</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -138,9 +235,11 @@ export function StrategyLab() {
         <div className="glass-card p-8 rounded-[2.5rem] bg-indigo-600/5 border-indigo-500/10 relative h-full flex flex-col">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-white">Backtest Engine</h2>
-              <span className="text-xs text-white/30 font-medium">
-                Simulation against 15Y historical data
+              <h2 className="text-2xl font-bold text-white tracking-tighter">
+                Backtest Deck
+              </h2>
+              <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">
+                10-Year Simulation Engine
               </span>
             </div>
             <div className="p-3 rounded-2xl bg-indigo-500 shadow-lg shadow-indigo-500/30">
@@ -148,50 +247,162 @@ export function StrategyLab() {
             </div>
           </div>
 
-          {/* Chart Visualization */}
-          <div className="flex-1 min-h-[300px] w-full bg-black/20 rounded-3xl p-6 relative flex items-end gap-1">
-            {mockBars.map((barHeight, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-indigo-500/40 rounded-t-sm"
-                style={{ height: `${barHeight}%` }}
-              />
-            ))}
-            <div className="absolute inset-x-6 bottom-6 h-[2px] bg-white/10" />
-            <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-indigo-500/20 border-t border-dashed border-indigo-500/30" />
-            <div className="absolute top-1/4 right-8 bg-black/60 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10">
-              <div className="text-[8px] text-white/40 uppercase font-black tracking-widest">
-                Covid Crash
+          <div className="flex-1 min-h-[350px] w-full bg-black/20 rounded-3xl p-8 relative">
+            {calculating ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <Loader2 className="animate-spin text-indigo-400" size={32} />
+                <span className="text-xs font-bold text-white/40 uppercase tracking-widest">
+                  Crunching Numbers...
+                </span>
               </div>
-              <div className="text-[10px] text-emerald-400 font-bold">
-                Stayed in Cash ✅
+            ) : results ? (
+              <div className="relative w-full h-full flex items-end gap-[1px]">
+                <div className="absolute inset-0 flex items-end gap-[1px] opacity-20">
+                  {results.benchmarkCurve.slice(-60).map((point, i) => (
+                    <div
+                      key={`bench-${i}`}
+                      className="flex-1 bg-white"
+                      style={{ height: `${(point.value / equityMax) * 100}%` }}
+                    />
+                  ))}
+                </div>
+                {results.equityCurve.slice(-60).map((point, i) => (
+                  <div
+                    key={`strat-${i}`}
+                    className="flex-1 bg-indigo-500/60 hover:bg-indigo-400 transition-colors group relative"
+                    style={{ height: `${(point.value / equityMax) * 100}%` }}
+                  >
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-black/90 px-3 py-1.5 rounded-lg text-[10px] text-white opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 font-mono shadow-2xl border border-white/10">
+                      <div className="text-white/40 mb-1">{point.date}</div>
+                      <div className="flex justify-between gap-4">
+                        <span>Strategy:</span>
+                        <span className="text-indigo-400 font-black">
+                          ${point.value.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Bench:</span>
+                        <span className="text-white/60">
+                          $
+                          {results.benchmarkCurve
+                            .slice(-60)
+                            [i]?.value.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="absolute top-0 right-0 flex gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">
+                      Strategy
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-white/20" />
+                    <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">
+                      Benchmark
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mt-8">
-            <div className="text-center">
-              <div className="text-[10px] text-white/30 uppercase font-bold tracking-widest mb-1">
-                CAGR
-              </div>
-              <div className="text-xl font-black text-white">12.8%</div>
-            </div>
-            <div className="text-center border-x border-white/5">
-              <div className="text-[10px] text-white/30 uppercase font-bold tracking-widest mb-1">
-                Max DD
-              </div>
-              <div className="text-xl font-black text-rose-400">-8.2%</div>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] text-white/30 uppercase font-bold tracking-widest mb-1">
-                Sharpe
-              </div>
-              <div className="text-xl font-black text-indigo-400">1.42</div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+            <StatCard
+              label="CAGR"
+              value={results ? `${results.performance.cagr.toFixed(1)}%` : "--"}
+              benchValue={
+                results
+                  ? `${results.benchmarkPerformance.cagr.toFixed(1)}%`
+                  : "--"
+              }
+            />
+            <StatCard
+              label="Max DD"
+              value={
+                results
+                  ? `-${results.performance.maxDrawdown.toFixed(1)}%`
+                  : "--"
+              }
+              benchValue={
+                results
+                  ? `-${results.benchmarkPerformance.maxDrawdown.toFixed(1)}%`
+                  : "--"
+              }
+              isNegative
+            />
+            <StatCard
+              label="Sharpe"
+              value={
+                results ? results.performance.sharpeRatio.toFixed(2) : "--"
+              }
+              benchValue={
+                results
+                  ? results.benchmarkPerformance.sharpeRatio.toFixed(2)
+                  : "--"
+              }
+              isSharpe
+            />
+            <StatCard
+              label="Sortino"
+              value={
+                results ? results.performance.sortinoRatio.toFixed(2) : "--"
+              }
+              benchValue={
+                results
+                  ? results.benchmarkPerformance.sortinoRatio.toFixed(2)
+                  : "--"
+              }
+              isSortino
+            />
           </div>
         </div>
       </div>
       <AnimatePresence />
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  benchValue,
+  isNegative,
+  isSharpe,
+  isSortino,
+}: {
+  label: string;
+  value: string;
+  benchValue: string;
+  isNegative?: boolean;
+  isSharpe?: boolean;
+  isSortino?: boolean;
+}) {
+  return (
+    <div className="text-center bg-white/5 p-4 rounded-3xl border border-white/5 flex flex-col justify-between">
+      <div className="text-[8px] text-white/30 uppercase font-black tracking-[0.2em] mb-2">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "text-lg font-black mb-1",
+          isNegative
+            ? "text-rose-400"
+            : isSharpe
+              ? "text-indigo-400"
+              : isSortino
+                ? "text-emerald-400"
+                : "text-white",
+        )}
+      >
+        {value}
+      </div>
+      <div className="text-[8px] font-bold text-white/20 uppercase">
+        Bench: {benchValue}
+      </div>
     </div>
   );
 }
