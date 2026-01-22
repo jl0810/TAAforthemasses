@@ -13,6 +13,13 @@ export const auth = createAuth(
     supportEmail: "support@raydoug.com",
   },
   {
+    baseURL: process.env.BETTER_AUTH_URL || "https://taaforthemasses.com",
+    active: {
+      expiresIn: 60 * 60 * 24 * 30, // 30 days
+    },
+    logger: {
+      level: "debug",
+    },
     socialProviders: {
       google: {
         clientId: process.env.AUTH_GOOGLE_ID!,
@@ -21,6 +28,16 @@ export const auth = createAuth(
     },
     advanced: {
       trustedOrigins: ["http://localhost:3000", "https://taaforthemasses.com"],
+      useSecureCookies: true,
+      crossSubdomainCookies: {
+        enabled: true,
+        domain: "taaforthemasses.com", // Explicit domain to prevent sub-domain/host mismatch
+      },
+      defaultCookieAttributes: {
+        secure: true,
+        sameSite: "none",
+        httpOnly: true,
+      },
     },
     databaseHooks: {
       user: {
