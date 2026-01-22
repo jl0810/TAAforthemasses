@@ -3,13 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { SignalMatrix } from "@/components/dashboard/signal-matrix";
 import { motion } from "framer-motion";
-import {
-  Rocket,
-  ShieldCheck,
-  TrendingUp,
-  AlertTriangle,
-  ArrowUpRight,
-} from "lucide-react";
+import { Rocket, ShieldCheck, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMarketSignals, MarketSignal } from "@/app/actions/market";
 import { useSession } from "@/lib/auth-client";
@@ -20,7 +14,6 @@ import { getUserPreferences, UserPreferenceConfig } from "@/app/actions/user";
 export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [universe, setUniverse] = useState<"ivy" | "sectors">("ivy");
   const [initialConfig, setInitialConfig] =
     useState<UserPreferenceConfig | null>(null);
@@ -43,7 +36,6 @@ export default function HomePage() {
     async function loadSignals() {
       if (!initialConfig) return;
       setLoading(true);
-      setError(null);
       try {
         const data = await getMarketSignals(
           initialConfig.global.maType,
@@ -53,9 +45,6 @@ export default function HomePage() {
         setSignals(data);
       } catch (err) {
         console.error("Error loading signals:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to load market data",
-        );
       } finally {
         setLoading(false);
       }
@@ -168,69 +157,6 @@ export default function HomePage() {
             </div>
           </div>
         </motion.div>
-      </section>
-
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            label: "Portfolio Survival",
-            value: "99.4%",
-            change: "+0.2%",
-            icon: ShieldCheck,
-          },
-          {
-            label: "Trend Strength",
-            value: loading
-              ? "..."
-              : riskOnCount > 3
-                ? "Very Strong"
-                : "Moderate",
-            change: "+12.4%",
-            icon: TrendingUp,
-          },
-          {
-            label: "Volatility",
-            value: "Low",
-            change: "-2.1%",
-            icon: TrendingUp,
-          },
-          {
-            label: "Rebalance Date",
-            value: "6 Days",
-            change: "Feb 1",
-            icon: ShieldCheck,
-          },
-        ].map((stat, idx) => {
-          const Icon = stat.icon;
-          return (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 * idx }}
-              className="glass-card p-4 rounded-3xl"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-xl bg-white/5 text-white/60">
-                  <Icon size={18} />
-                </div>
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">
-                  {stat.label}
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white">
-                  {stat.value}
-                </span>
-                {stat.change && (
-                  <span className="text-[10px] font-bold text-emerald-400">
-                    {stat.change}
-                  </span>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
       </section>
 
       <section className="relative">

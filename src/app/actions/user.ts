@@ -34,6 +34,13 @@ export interface UserPreferenceConfig {
   };
 }
 
+// Helper to get default start date (12 months ago)
+const getDefaultStartDate = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 12);
+  return d.toISOString().split("T")[0];
+};
+
 // Official Ivy Portfolio from Advisor Perspectives
 const DEFAULT_CONFIG: UserPreferenceConfig = {
   portfolio: {
@@ -45,7 +52,7 @@ const DEFAULT_CONFIG: UserPreferenceConfig = {
       commodities: "DBC",
       benchmark: "AOR",
     },
-    strategyStartDate: "2026-01-01",
+    strategyStartDate: getDefaultStartDate(),
     rebalanceFrequency: "Monthly",
   },
   global: {

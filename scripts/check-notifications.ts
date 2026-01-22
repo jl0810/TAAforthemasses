@@ -7,6 +7,7 @@ if (process.env.NODE_ENV !== "production") {
 
 import { db } from "../src/lib/db";
 import { userSignals, marketPrices } from "../src/db/schema/tables";
+import { userProfiles } from "@jl0810/db-client";
 import { eq, desc } from "drizzle-orm";
 import {
   calculateSafetyBuffer,
@@ -14,16 +15,26 @@ import {
   calculateEMA,
 } from "../src/lib/taa-math";
 import { UserPreferenceConfig } from "../src/app/actions/user";
+import { sendEmail } from "../src/lib/email";
 
 async function main() {
   console.log("🔍 Starting Nightly Notification Check...");
 
-  // 1. Fetch all users
-  const users = await db.select().from(userSignals);
-  console.log(`👤 Found ${users.length} users.`);
+  // 1. Fetch all users with their profile (for email)
+  const users = await db
+    .select({
+      id: userSignals.id,
+      userId: userSignals.userId,
+      config: userSignals.config,
+      email: userProfiles.email,
+    })
+    .from(userSignals)
+    .innerJoin(userProfiles, eq(userSignals.userId, userProfiles.userId));
+
+  console.log(`👤 Found ${users.length} users with active signals.`);
 
   for (const user of users) {
-    if (!user.config) continue;
+    if (!user.config || !user.email) continue;
 
     let config: UserPreferenceConfig;
     try {
@@ -35,9 +46,7 @@ async function main() {
 
     // Skip if notifications disabled
     if (!config.notifications?.enabled) {
-      console.log(
-        `⏩ Skipping user ${user.userId.slice(0, 8)}: Notifications disabled.`,
-      );
+      // Quietly skip disabled users
       continue;
     }
 
@@ -111,7 +120,7 @@ async function main() {
         // Risk-On to Risk-Off: Price drops below Trend
         if (currentPrice <= trendVal) {
           alerts.push(
-            `🚨 **${ticker}** CROSSOVER ALERT: Price ($${currentPrice.toFixed(2)}) has dropped below the ${maLength}-Month ${config.portfolio.maType} ($${trendVal.toFixed(2)}).`,
+            `🚨 <strong>${ticker} CROSSOVER ALERT</strong><br/>Price ($${currentPrice.toFixed(2)}) has dropped below the ${maLength}-Month ${config.portfolio.maType} ($${trendVal.toFixed(2)}).`,
           );
         }
       } else if (config.notifications.thresholdType === "BUFFER") {
@@ -120,7 +129,7 @@ async function main() {
         if (Math.abs(bufferPct) < threshold) {
           const direction = bufferPct > 0 ? "above" : "below";
           alerts.push(
-            `⚠️ **${ticker}** BUFFER ALERT: Price ($${currentPrice.toFixed(2)}) is ${Math.abs(bufferPct).toFixed(2)}% ${direction} the trend line (Threshold: ${threshold}%).`,
+            `⚠️ <strong>${ticker} BUFFER ALERT</strong><br/>Price ($${currentPrice.toFixed(2)}) is ${Math.abs(bufferPct).toFixed(2)}% ${direction} the trend line (Threshold: ${threshold}%).`,
           );
         }
       }
@@ -128,11 +137,26 @@ async function main() {
 
     // Send Email if alerts exist
     if (alerts.length > 0) {
-      console.log(`📧 Sending ${alerts.length} alerts to user (simulated)...`);
-      console.log(`--- EMAIL BODY ---`);
-      console.log(alerts.join("\n"));
-      console.log(`------------------`);
-      // Actual email sending would require user email lookup
+      console.log(`📧 Sending ${alerts.length} alerts to ${user.email}...`);
+
+      const emailHtml = `
+        <div style="font-family: sans-serif; color: #333;">
+          <h2>Portfolio Safety Alerts</h2>
+          <p>The following assets in your portfolio have triggered your safety buffers:</p>
+          <div style="background: #fdf2f8; border-left: 4px solid #db2777; padding: 16px; margin: 20px 0;">
+            ${alerts.map((a) => `<p style="margin: 10px 0;">${a}</p>`).join("")}
+          </div>
+          <p style="font-size: 12px; color: #666;">
+            You can configure these alerts in your <a href="https://taaforthemasses.com/profile">Profile Settings</a>.
+          </p>
+        </div>
+      `;
+
+      await sendEmail({
+        to: user.email,
+        subject: `🚨 Portfolio Alert: ${alerts.length} Assets Triggered`,
+        html: emailHtml,
+      });
     } else {
       console.log(`✅ No alerts for user ${user.userId.slice(0, 8)}`);
     }

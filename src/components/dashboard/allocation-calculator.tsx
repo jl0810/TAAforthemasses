@@ -55,22 +55,27 @@ export function AllocationCalculator({
     // Group assets by month to show a chronological rebalance log
     const months = signals[0]?.history || [];
 
+    // Find the first month chronologically that meets the cutoff
+    const startIdx = months.findIndex((m) => new Date(m.date) >= cutoffDate);
+    if (startIdx === -1) return [];
+
     // Iterate from newest to oldest
-    for (let i = months.length - 1; i >= 0; i--) {
+    for (let i = months.length - 1; i >= startIdx; i--) {
       const monthData = months[i];
       const monthDate = new Date(monthData.date);
-
-      if (monthDate < cutoffDate) continue;
 
       signals.forEach((s) => {
         const hist = s.history[i];
         if (!hist) return;
 
         const isCurrentMonth = i === months.length - 1;
+        const isStartMonth = i === startIdx;
+
         // In the blotter, for the current month, we only show what's Top-N OR result of a signal change
         if (isCurrentMonth && !s.isTopN && s.status === "Risk-On") return;
 
-        const prevHist = s.history[i - 1]; // Signal from previous month
+        // Force a fresh start for the very first month of the strategy
+        const prevHist = isStartMonth ? null : s.history[i - 1];
         const isMonthlyRebalance = rebalanceFrequency === "Monthly";
 
         let side: "BUY" | "SELL" | "HOLD" | "-" = "-";
@@ -91,12 +96,12 @@ export function AllocationCalculator({
             // ENTRY SIGNAL
             if (isWinner) {
               side = "BUY";
-              rationale = `Entry: Rank #${s.rank} (Top ${concentration})`;
+              rationale = `Strategy Entry: Rank #${s.rank} (Top ${concentration})`;
               actionColor = "text-emerald-400 bg-emerald-400/10";
               targetNotional = targetSlotSize;
             } else {
               side = "-"; // Stay Cash / Monitor
-              rationale = "Momentum positive but outside Top N";
+              rationale = `Monitor: Rank #${s.rank} (Outside Top ${concentration})`;
               actionColor = "text-white/20 bg-white/5";
               targetNotional = 0;
             }
@@ -104,7 +109,7 @@ export function AllocationCalculator({
             // ALREADY LONG
             if (!isWinner) {
               side = "SELL";
-              rationale = `Exit: Dropped from Top ${concentration} (Rank #${s.rank})`;
+              rationale = `Exit: Rank #${s.rank} (Dropped from Top ${concentration})`;
               actionColor = "text-rose-400 bg-rose-400/10";
               targetNotional = 0; // Liquidate
             } else if (isMonthlyRebalance) {
@@ -116,15 +121,17 @@ export function AllocationCalculator({
               if (Math.abs(drift) > 5.0) {
                 // Trim or Top Up
                 side = drift > 0 ? "SELL" : "BUY";
-                rationale = `Rebal: ${Math.abs(drift).toFixed(1)}% Drift`;
+                rationale = `Rebalance: ${Math.abs(drift).toFixed(1)}% Drift vs Target`;
                 actionColor =
                   drift > 0
-                    ? "text-amber-400 bg-amber-400/10" // Sell trim is warning/amber
+                    ? "text-amber-400 bg-amber-400/10"
                     : "text-emerald-400 bg-emerald-400/10";
                 targetNotional = targetSlotSize;
               } else {
                 side = "HOLD";
-                rationale = `Trend #${s.rank} • Drift < 5%`;
+                rationale = `Hold: Rank #${s.rank} • Drift (${
+                  drift > 0 ? "+" : ""
+                }${drift.toFixed(1)}%) < 5%`;
                 actionColor = "text-indigo-400 bg-indigo-400/10";
                 targetNotional = targetSlotSize;
               }
@@ -154,12 +161,8 @@ export function AllocationCalculator({
           }
         }
 
-        // Only add actionable items or active Top-N holds
-        const isActionable = side !== "-" && side !== "HOLD";
-        const isHolding = side === "HOLD" || (side === "BUY" && !prevHist);
-
-        // Filter logic: Show if actionable OR it's a current holding we care about
-        if (isActionable || (isHolding && s.isTopN)) {
+        // Filter logic: Only add actionable items (BUY or SELL)
+        if (side === "BUY" || side === "SELL") {
           allTrades.push({
             dateLabel: hist.month,
             ticker: s.symbol,
@@ -418,10 +421,20 @@ export function AllocationCalculator({
 
         {/* Footer Actions */}
         <div className="p-6 border-t border-white/5 bg-white/[0.01] flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-3 text-white/30">
-            <Info size={14} />
-            <p className="text-[10px] font-medium">
-              Simulation assumes T+0 execution at Month-End Adjusted Close.
+          <div className="flex flex-col gap-1 items-start text-white/30">
+            <div className="flex items-center gap-2">
+              <Info size={12} />
+              <p className="text-[10px] font-medium uppercase tracking-tighter">
+                Institutional Audit Trace
+              </p>
+            </div>
+            <p className="text-[9px] font-medium leading-tight max-w-sm">
+              Simulation assumes T+0 execution.{" "}
+              <span className="text-amber-500/50 font-bold">
+                NOT FINANCIAL ADVICE:
+              </span>{" "}
+              Indicators are for backtesting research only. Quantitative
+              strategies involve market risk.
             </p>
           </div>
           <div className="flex gap-3">
