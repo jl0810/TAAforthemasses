@@ -64,12 +64,12 @@ export function ProfileSettings({ initialConfig }: Props) {
             }
           />
           <InputGroup
-            label="US Bonds"
-            value={config.tickers.usBonds}
+            label="Bonds"
+            value={config.tickers.bonds}
             onChange={(v) =>
               setConfig({
                 ...config,
-                tickers: { ...config.tickers, usBonds: v },
+                tickers: { ...config.tickers, bonds: v },
               })
             }
           />

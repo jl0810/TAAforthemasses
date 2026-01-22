@@ -5,15 +5,18 @@ import { sql } from "drizzle-orm";
 
 // 30 ETF Universe (Broad Assets + Sectors)
 const UNIVERSE = [
-  // Broad Asset Classes (Ivy 5 + Variants)
-  "VTI",
-  "VEA",
-  "VWO",
-  "BND",
-  "VNQ",
-  "GSG",
-  "GLD",
-  "BIL",
+  // Broad Asset Classes (Ivy Portfolio + Variants)
+  "VTI", // Vanguard Total Stock Market
+  "VEA", // Vanguard FTSE Developed Markets
+  "VEU", // Vanguard FTSE All-World ex-US (Official Ivy)
+  "VWO", // Vanguard FTSE Emerging Markets
+  "BND", // Vanguard Total Bond Market
+  "IEF", // iShares 7-10 Year Treasury (Official Ivy)
+  "VNQ", // Vanguard Real Estate
+  "GSG", // iShares S&P GSCI Commodity
+  "DBC", // Invesco DB Commodity Index (Official Ivy)
+  "GLD", // SPDR Gold Shares
+  "BIL", // SPDR 1-3 Month T-Bill (Cash proxy)
 
   // US Sectors (SPDR)
   "XLE",
@@ -26,7 +29,7 @@ const UNIVERSE = [
   "XLY",
   "XLB",
   "XLC",
-  "XLR",
+  "XLRE", // Fixed: was XLR
 
   // Factors / Styles
   "MTUM",

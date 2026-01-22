@@ -30,12 +30,14 @@ export interface MarketSignal {
   history: SignalHistory[];
 }
 
+// Official Ivy Portfolio from Advisor Perspectives
+// https://www.advisorperspectives.com/dshort/updates/
 const DEFAULT_IVY_5 = [
-  { id: "usStocks", symbol: "VTI", name: "US Stocks" },
-  { id: "intlStocks", symbol: "VEA", name: "Intl Stocks" },
-  { id: "usBonds", symbol: "BND", name: "US Bonds" },
-  { id: "realEstate", symbol: "VNQ", name: "Real Estate" },
-  { id: "commodities", symbol: "GSG", name: "Commodities" },
+  { id: "usStocks", symbol: "VTI", name: "US Stocks" }, // Vanguard Total Stock Market
+  { id: "intlStocks", symbol: "VEU", name: "Intl Stocks" }, // Vanguard FTSE All-World ex-US
+  { id: "bonds", symbol: "IEF", name: "Bonds" }, // iShares 7-10 Year Treasury
+  { id: "realEstate", symbol: "VNQ", name: "Real Estate" }, // Vanguard Real Estate
+  { id: "commodities", symbol: "DBC", name: "Commodities" }, // Invesco DB Commodity Index
 ];
 
 /**
