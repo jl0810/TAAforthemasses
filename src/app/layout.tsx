@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   title: "TAA for the Masses | Quantitative Investment Dashboard",
   description:
     "Democratizing institutional-grade Tactical Asset Allocation signals for retail investors.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
