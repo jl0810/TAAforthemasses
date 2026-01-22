@@ -21,6 +21,17 @@ export const auth = createAuth(
     },
     advanced: {
       trustedOrigins: ["http://localhost:3000", "https://taaforthemasses.com"],
+      useSecureCookies: true, // Force Secure cookies even behind proxy
+      cookiePrefix: "taa-auth",
+      crossSubdomainCookies: {
+        enabled: true,
+        domain: ".taaforthemasses.com", // Allow sharing with subdomains if needed
+      },
+      defaultCookieAttributes: {
+        secure: true,
+        sameSite: "lax", // Recommended for OAuth top-level navigation
+        httpOnly: true,
+      },
     },
     databaseHooks: {
       user: {
