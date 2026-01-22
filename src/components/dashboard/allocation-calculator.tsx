@@ -73,14 +73,14 @@ export function AllocationCalculator() {
             </h3>
           </div>
           <div className="relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-2xl font-black">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/60 text-2xl font-black">
               $
             </div>
             <input
               type="number"
               value={allocation}
               onChange={(e) => setAllocation(Number(e.target.value))}
-              className="w-full bg-black/30 border-2 border-white/5 hover:border-emerald-500/30 transition-all rounded-3xl py-6 pl-10 pr-6 text-3xl font-black font-outfit focus:outline-none focus:border-emerald-500/50"
+              className="w-full bg-black/30 border-2 border-white/5 hover:border-emerald-500/30 transition-all rounded-3xl py-6 pl-10 pr-6 text-3xl font-black font-outfit text-white focus:outline-none focus:border-emerald-500/50"
             />
           </div>
           <div className="mt-6 p-4 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
