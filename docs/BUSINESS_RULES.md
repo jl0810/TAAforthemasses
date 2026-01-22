@@ -11,7 +11,7 @@ The core "Ivy 5" timing logic is defined as follows:
     - **Risk-On**: Current Month-End Price > 10-Month Trend.
     - **Risk-Off**: Current Month-End Price <= 10-Month Trend.
 3.  **Safety Buffer**:
-    - Calculated as `(Price - Trend) / Price`.
+    - Calculated as `(Price - Trend) / Trend`.
     - Positive buffer indicates strength; negative indicates weakness.
 
 ## BR-002: Trading Actions

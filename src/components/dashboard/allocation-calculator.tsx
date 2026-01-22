@@ -14,6 +14,12 @@ import {
 import { cn } from "@/lib/utils";
 import { MarketSignal } from "@/app/actions/market";
 
+import {
+  calculateSafetyBuffer,
+  calculateRebalanceDrift,
+  calculateEqualWeightAllocation,
+} from "@/lib/taa-math";
+
 export function AllocationCalculator({
   signals,
   strategyStartDate,
@@ -26,7 +32,6 @@ export function AllocationCalculator({
   concentration?: number;
 }) {
   const [allocation, setAllocation] = useState(100000);
-  const targetWeight = 1 / concentration;
 
   // Filter history based on strategy start date and zip signals together
   const ledger = React.useMemo(() => {
@@ -50,11 +55,6 @@ export function AllocationCalculator({
     // Group assets by month to show a chronological rebalance log
     // We assume all assets have a common monthly history array
     const months = signals[0]?.history || [];
-
-    // Filter signals to only those that are either isTopN or have a Risk-Off exit signal
-    const relevantSignals = signals.filter(
-      (s) => s.isTopN || s.status === "Risk-Off",
-    );
 
     // Iterate from newest to oldest
     for (let i = months.length - 1; i >= 0; i--) {
@@ -99,14 +99,17 @@ export function AllocationCalculator({
               rationale = "Dropped out of Top Momentum Tier";
               actionColor = "text-rose-400 bg-rose-400/10";
             } else if (isMonthlyRebalance) {
-              const pricePerf = prevHist
-                ? (hist.price - prevHist.price) / prevHist.price
+              const drift = prevHist
+                ? calculateRebalanceDrift(hist.price, prevHist.price)
                 : 0;
-              if (Math.abs(pricePerf) > 0.05) {
-                instruction = pricePerf > 0 ? "SELL (TRIM)" : "BUY (TOP UP)";
-                rationale = `Maintain ${Math.round(targetWeight * 100)}% Weight (#${s.rank})`;
+
+              // 5% drift corridor
+              if (Math.abs(drift) > 5.0) {
+                instruction = drift > 0 ? "SELL (TRIM)" : "BUY (TOP UP)";
+                const targetPct = (1 / concentration) * 100;
+                rationale = `Maintain ${Math.round(targetPct)}% Weight (#${s.rank})`;
                 actionColor =
-                  pricePerf > 0
+                  drift > 0
                     ? "text-rose-400 bg-rose-400/10"
                     : "text-emerald-400 bg-emerald-400/10";
               } else {
@@ -152,7 +155,7 @@ export function AllocationCalculator({
             status: hist.status,
             amount:
               s.isTopN && hist.status === "Risk-On"
-                ? allocation * targetWeight
+                ? calculateEqualWeightAllocation(allocation, concentration)
                 : 0,
             audit: s.audit
               ? { ...s.audit, price: hist.price, trend: hist.trend }
@@ -163,23 +166,33 @@ export function AllocationCalculator({
     }
 
     return allTrades;
-  }, [signals, allocation, strategyStartDate, rebalanceFrequency]);
+  }, [
+    signals,
+    allocation,
+    strategyStartDate,
+    rebalanceFrequency,
+    concentration,
+  ]);
 
   const currentMonthLegs = signals
     .filter((s) => s.isTopN)
     .map((s) => ({
       ticker: s.symbol,
       signal: s.status === "Risk-On" ? "ON" : "OFF",
-      amount: s.status === "Risk-On" ? allocation * targetWeight : 0,
+      amount:
+        s.status === "Risk-On"
+          ? calculateEqualWeightAllocation(allocation, concentration)
+          : 0,
     }));
 
   const totalInvested = currentMonthLegs
     .filter((l) => l.signal === "ON")
     .reduce((acc, l) => acc + l.amount, 0);
-  const totalInCash =
-    allocation *
-    targetWeight *
-    (concentration - currentMonthLegs.filter((l) => l.signal === "ON").length);
+
+  const targetAlloc = calculateEqualWeightAllocation(allocation, concentration);
+  const activeLegs = currentMonthLegs.filter((l) => l.signal === "ON").length;
+  // Cash is remainder
+  const totalInCash = allocation - targetAlloc * activeLegs;
 
   return (
     <div className="space-y-8">
@@ -396,14 +409,15 @@ export function AllocationCalculator({
                                   : "text-rose-400",
                               )}
                             >
-                              {((trade.price / trade.trend - 1) * 100).toFixed(
-                                2,
-                              )}
+                              {calculateSafetyBuffer(
+                                trade.price,
+                                trade.trend,
+                              ).toFixed(2)}
                               %
                             </span>
                           </div>
                           <div className="text-[10px] text-white/20 font-mono italic">
-                            (P / T) - 1 = Buffer
+                            (P - T) / T = Buffer
                           </div>
                         </div>
                       </div>

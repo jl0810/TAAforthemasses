@@ -107,6 +107,15 @@ export function getSignalAction(
  * @param movingAverage - The calculated trend (MA)
  * @returns Percentage buffer (positive = Risk-On, negative = Risk-Off)
  */
+/**
+ * Safety Buffer Calculation (Distance from Trend).
+ * Standardized to: (Price - Trend) / Trend
+ *
+ * @rules BR-001 Signal Generation Logic (Safety Buffer)
+ * @param currentPrice - The current asset price
+ * @param movingAverage - The calculated trend (MA)
+ * @returns Percentage buffer (positive = Risk-On, negative = Risk-Off)
+ */
 export function calculateSafetyBuffer(
   currentPrice: number,
   movingAverage: number,
@@ -129,13 +138,43 @@ export function calculateTotalReturn(
 }
 
 /**
- * Standard Deviation
+ * Calculates drift percentage for rebalancing.
+ * Drift = |(Current Weight - Target Weight) / Target Weight|
+ * But simply: Returns the absolute percentage change required to return to target.
+ * Simple Drift Metric: (Current Value - Target Value) / Target Value
+ */
+export function calculateRebalanceDrift(
+  currentValue: number,
+  targetValue: number,
+): number {
+  if (targetValue === 0) return 0;
+  return ((currentValue - targetValue) / targetValue) * 100;
+}
+
+/**
+ * Equal Weight Position Sizing.
+ * Simply: Capital * (1 / N)
+ */
+export function calculateEqualWeightAllocation(
+  capital: number,
+  concentration: number,
+): number {
+  if (concentration === 0) return 0;
+  return capital * (1 / concentration);
+}
+
+/**
+ * Standard Deviation (Sample).
+ * Uses N-1 (Bessel's correction) for unbiased estimation of population variance.
+ * CFA Level 3 Standard.
  */
 export function calculateStandardDeviation(values: number[]): number {
-  if (values.length === 0) return 0;
+  if (values.length < 2) return 0; // Need at least 2 points for Sample SD
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
   const squareDiffs = values.map((v) => Math.pow(v - avg, 2));
-  const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
+  // Sample SD: Divide by (N - 1)
+  const avgSquareDiff =
+    squareDiffs.reduce((a, b) => a + b, 0) / (values.length - 1);
   return Math.sqrt(avgSquareDiff);
 }
 
@@ -147,7 +186,7 @@ export function calculateSharpeRatio(
   returns: number[],
   riskFreeRate: number = 0.04,
 ): number {
-  if (returns.length === 0) return 0;
+  if (returns.length < 2) return 0;
   const monthlyRf = riskFreeRate / 12;
   const excessReturns = returns.map((r) => r / 100 - monthlyRf);
   const avgExcess = excessReturns.reduce((a, b) => a + b, 0) / returns.length;
@@ -201,11 +240,15 @@ export function calculateMaxDrawdown(prices: number[]): number {
 
 /**
  * Annualized Return (CAGR/Geometric Mean)
+ * Supports flexible periods per year (e.g. 12 for monthly, 252 for daily).
  */
-export function calculateAnnualizedReturn(returns: number[]): number {
+export function calculateAnnualizedReturn(
+  returns: number[],
+  periodsPerYear: number = 12,
+): number {
   if (returns.length === 0) return 0;
   // returns are in percentage (e.g. 1.5 for 1.5%)
   const growth = returns.reduce((acc, r) => acc * (1 + r / 100), 1);
-  const years = returns.length / 12;
+  const years = returns.length / periodsPerYear;
   return (Math.pow(growth, 1 / years) - 1) * 100;
 }

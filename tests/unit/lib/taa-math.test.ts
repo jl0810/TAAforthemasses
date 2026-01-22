@@ -4,6 +4,9 @@ import {
   calculateEMA,
   getSignalAction,
   calculateSafetyBuffer,
+  calculateStandardDeviation,
+  calculateRebalanceDrift,
+  calculateEqualWeightAllocation,
 } from "@/lib/taa-math";
 
 describe("TAA Math Library", () => {
@@ -89,13 +92,45 @@ describe("TAA Math Library", () => {
 
   describe("Safety Buffer (BR-001)", () => {
     it("should calculate positive buffer when price > trend", () => {
-      // Price 110, Trend 100 -> +10%
+      // Price 110, Trend 100 -> (110 - 100) / 100 = 0.10 (10%)
       expect(calculateSafetyBuffer(110, 100)).toBeCloseTo(10);
     });
 
     it("should calculate negative buffer when price < trend", () => {
-      // Price 90, Trend 100 -> -10%
+      // Price 90, Trend 100 -> (90 - 100) / 100 = -0.10 (-10%)
       expect(calculateSafetyBuffer(90, 100)).toBeCloseTo(-10);
+    });
+  });
+
+  describe("Standard Deviation (Sample SD)", () => {
+    it("should calculate Sample Standard Deviation (N-1)", () => {
+      // Dataset: 2, 4, 4, 4, 5, 5, 7, 9
+      // Mean: 5
+      // Population SD: 2
+      // Sample SD: 2.138
+      const values = [2, 4, 4, 4, 5, 5, 7, 9];
+      const sd = calculateStandardDeviation(values);
+      expect(sd).toBeCloseTo(2.138, 3);
+    });
+
+    it("should return 0 for insufficient data (< 2 points)", () => {
+      expect(calculateStandardDeviation([10])).toBe(0);
+    });
+  });
+
+  describe("Allocation & Drift Utilities", () => {
+    it("should calculate equal weight capital allocation", () => {
+      // $100k capital, 5 slots -> $20k
+      expect(calculateEqualWeightAllocation(100000, 5)).toBe(20000);
+      // $100k capital, 3 slots -> $33,333.33
+      expect(calculateEqualWeightAllocation(100000, 3)).toBeCloseTo(33333.33);
+    });
+
+    it("should calculate rebalance drift", () => {
+      // Current $22k, Target $20k -> +10% drift
+      expect(calculateRebalanceDrift(22000, 20000)).toBeCloseTo(10);
+      // Current $18k, Target $20k -> -10% drift
+      expect(calculateRebalanceDrift(18000, 20000)).toBeCloseTo(-10);
     });
   });
 });
