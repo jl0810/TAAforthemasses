@@ -84,7 +84,7 @@ export function LandingHero() {
           </Link>
 
           <a
-            href="https://mebfaber.com/2007/02/06/ivy-portfolio-spreadsheet/"
+            href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461"
             target="_blank"
             rel="noopener noreferrer"
             className="px-8 py-4 bg-white/5 text-white rounded-full font-bold text-lg hover:bg-white/10 transition-all backdrop-blur-sm border border-white/10"
