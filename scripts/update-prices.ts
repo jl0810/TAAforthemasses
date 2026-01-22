@@ -8,6 +8,7 @@ import { sql } from "drizzle-orm";
 const UNIVERSE = [
   // Broad Asset Classes (Ivy Portfolio + Variants)
   "VTI", // Vanguard Total Stock Market
+  "SPY", // SPDR S&P 500 ETF Trust
   "VEA", // Vanguard FTSE Developed Markets
   "VEU", // Vanguard FTSE All-World ex-US (Official Ivy)
   "VWO", // Vanguard FTSE Emerging Markets
