@@ -18,12 +18,15 @@ export function AllocationCalculator({
   signals,
   strategyStartDate,
   rebalanceFrequency,
+  concentration = 5,
 }: {
   signals: MarketSignal[];
   strategyStartDate?: string;
   rebalanceFrequency?: "Monthly" | "Yearly";
+  concentration?: number;
 }) {
   const [allocation, setAllocation] = useState(100000);
+  const targetWeight = 1 / concentration;
 
   // Filter history based on strategy start date and zip signals together
   const ledger = React.useMemo(() => {
@@ -48,6 +51,11 @@ export function AllocationCalculator({
     // We assume all assets have a common monthly history array
     const months = signals[0]?.history || [];
 
+    // Filter signals to only those that are either isTopN or have a Risk-Off exit signal
+    const relevantSignals = signals.filter(
+      (s) => s.isTopN || s.status === "Risk-Off",
+    );
+
     // Iterate from newest to oldest
     for (let i = months.length - 1; i >= 0; i--) {
       const monthData = months[i];
@@ -56,8 +64,14 @@ export function AllocationCalculator({
       if (monthDate < cutoffDate) continue;
 
       signals.forEach((s) => {
+        // For the HISTORICAL ledger, we show all signals to provide context
+        // But for the current 'Active' month, we focus on Top-N
         const hist = s.history[i];
         if (!hist) return;
+
+        const isCurrentMonth = i === months.length - 1;
+        // In the blotter, for the current month, we only show what's Top-N OR an Exit
+        if (isCurrentMonth && !s.isTopN && s.status === "Risk-On") return;
 
         const prevHist = s.history[i - 1]; // Signal from previous month
         const isMonthlyRebalance = rebalanceFrequency === "Monthly";
@@ -68,80 +82,104 @@ export function AllocationCalculator({
         let actionColor = "";
 
         if (hist.status === "Risk-On") {
+          // Additional check: Is it in the Top N selection?
+          const isWinner = s.isTopN;
+
           if (!prevHist || prevHist.status === "Risk-Off") {
-            instruction = "NEW BUY (ENTRY)";
-            rationale = "10M Moving Average Crossover (Bullish)";
-            actionColor = "text-emerald-400 bg-emerald-400/10";
+            instruction = isWinner ? "NEW BUY (ENTRY)" : "STAY CASH";
+            rationale = isWinner
+              ? `Top Momentum Rank (#${s.rank})`
+              : "Momentum Strength insufficient (Outside Top N)";
+            actionColor = isWinner
+              ? "text-emerald-400 bg-emerald-400/10"
+              : "text-white/20 bg-white/5";
           } else {
-            // Check for monthly rebalance (Trim vs Add)
-            if (isMonthlyRebalance) {
+            if (!isWinner) {
+              instruction = "SELL (OUTRANKED)";
+              rationale = "Dropped out of Top Momentum Tier";
+              actionColor = "text-rose-400 bg-rose-400/10";
+            } else if (isMonthlyRebalance) {
               const pricePerf = prevHist
                 ? (hist.price - prevHist.price) / prevHist.price
                 : 0;
-              if (pricePerf > 0.02) {
-                instruction = "SELL (TRIM WINNER)";
-                rationale = `Portfolio Rebalance (+${(pricePerf * 100).toFixed(1)}% gain)`;
-                actionColor = "text-rose-400 bg-rose-400/10";
-              } else if (pricePerf < -0.02) {
-                instruction = "BUY (TOP UP)";
-                rationale = `Portfolio Rebalance (${(pricePerf * 100).toFixed(1)}% dip)`;
-                actionColor = "text-emerald-400 bg-emerald-400/10";
+              if (Math.abs(pricePerf) > 0.05) {
+                instruction = pricePerf > 0 ? "SELL (TRIM)" : "BUY (TOP UP)";
+                rationale = `Maintain ${Math.round(targetWeight * 100)}% Weight (#${s.rank})`;
+                actionColor =
+                  pricePerf > 0
+                    ? "text-rose-400 bg-rose-400/10"
+                    : "text-emerald-400 bg-emerald-400/10";
               } else {
                 instruction = "HOLD (BALANCED)";
-                rationale = "Weight within tolerance bands";
+                rationale = `Position #${s.rank} in Trend`;
                 actionColor = "text-indigo-400 bg-indigo-400/10";
               }
             } else {
-              instruction = "HOLD (NO RESET)";
-              rationale = "Yearly tax-efficient drift active";
+              instruction = "HOLD (DRIFT)";
+              rationale = `Rank #${s.rank} - Momentum maintained`;
               actionColor = "text-white/40 bg-white/5";
             }
           }
         } else {
           if (prevHist?.status === "Risk-On") {
             instruction = "SELL (LIQUIDATE)";
-            rationale = "10M Moving Average Crossover (Bearish)";
+            rationale = "Trendline Breach (Risk-Off)";
             actionColor = "text-rose-400 bg-rose-400/10";
           } else {
             instruction = "STAY CASH";
-            rationale = "Asset remains below Trendline";
+            rationale = "No momentum trend detected";
             actionColor = "text-white/20 bg-white/5";
           }
         }
 
-        allTrades.push({
-          dateLabel: hist.month,
-          ticker: s.symbol,
-          name: s.name,
-          price: hist.price,
-          trend: hist.trend,
-          instruction,
-          rationale,
-          actionColor,
-          status: hist.status,
-          amount: allocation * 0.2, // Fixed 20% slice
-          audit: s.audit
-            ? { ...s.audit, price: hist.price, trend: hist.trend }
-            : undefined,
-        });
+        // Only add to ledger if it's an actionable change or it's a Top-N hold
+        const isActionable =
+          instruction !== "STAY CASH" &&
+          instruction !== "HOLD (BALANCED)" &&
+          instruction !== "HOLD (DRIFT)";
+        const shouldShow = isActionable || s.isTopN;
+
+        if (shouldShow) {
+          allTrades.push({
+            dateLabel: hist.month,
+            ticker: s.symbol,
+            name: s.name,
+            price: hist.price,
+            trend: hist.trend,
+            instruction,
+            rationale,
+            actionColor,
+            status: hist.status,
+            amount:
+              s.isTopN && hist.status === "Risk-On"
+                ? allocation * targetWeight
+                : 0,
+            audit: s.audit
+              ? { ...s.audit, price: hist.price, trend: hist.trend }
+              : undefined,
+          });
+        }
       });
     }
 
     return allTrades;
   }, [signals, allocation, strategyStartDate, rebalanceFrequency]);
 
-  const currentMonthLegs = signals.map((s) => ({
-    ticker: s.symbol,
-    signal: s.status === "Risk-On" ? "ON" : "OFF",
-    amount: allocation * 0.2,
-  }));
+  const currentMonthLegs = signals
+    .filter((s) => s.isTopN)
+    .map((s) => ({
+      ticker: s.symbol,
+      signal: s.status === "Risk-On" ? "ON" : "OFF",
+      amount: s.status === "Risk-On" ? allocation * targetWeight : 0,
+    }));
 
   const totalInvested = currentMonthLegs
     .filter((l) => l.signal === "ON")
     .reduce((acc, l) => acc + l.amount, 0);
-  const totalInCash = currentMonthLegs
-    .filter((l) => l.signal === "OFF")
-    .reduce((acc, l) => acc + l.amount, 0);
+  const totalInCash =
+    allocation *
+    targetWeight *
+    (concentration - currentMonthLegs.filter((l) => l.signal === "ON").length);
 
   return (
     <div className="space-y-8">
@@ -202,7 +240,7 @@ export function AllocationCalculator({
                 Active Trade Blotter
               </h2>
               <p className="text-xs text-white/30 font-medium">
-                Ivy 5 Strategy • 20% Equal Weight Rebalance
+                Momentum Concentration • Top {concentration} Ranking Logic
               </p>
             </div>
           </div>

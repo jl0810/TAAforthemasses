@@ -24,6 +24,16 @@ export function StrategyComparison({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /* 
+    Benchmark Logic:
+    - Global AA (Ivy): Uses user preference (default AOR)
+    - Sectors: Defaults to SPY (S&P 500) as the relevant relative benchmark
+  */
+  const benchmarkTicker =
+    universe === "sectors"
+      ? "SPY"
+      : initialConfig.portfolio.tickers.benchmark || "AOR";
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -32,6 +42,7 @@ export function StrategyComparison({
         lookbackYears: lookback,
         rebalanceFrequency: initialConfig.portfolio.rebalanceFrequency,
         universe,
+        benchmark: benchmarkTicker,
       });
       if (data.error) {
         setError(data.error);
@@ -45,7 +56,12 @@ export function StrategyComparison({
     } finally {
       setLoading(false);
     }
-  }, [lookback, initialConfig.portfolio.rebalanceFrequency]);
+  }, [
+    lookback,
+    initialConfig.portfolio.rebalanceFrequency,
+    universe,
+    benchmarkTicker,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -74,8 +90,7 @@ export function StrategyComparison({
             Performance Delta
           </h2>
           <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">
-            Strategy vs {initialConfig.portfolio.tickers.benchmark || "AOR"}{" "}
-            Benchmark
+            Strategy vs {benchmarkTicker} Benchmark
           </p>
         </div>
 

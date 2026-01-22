@@ -32,6 +32,8 @@ export default async function CommandPage() {
       <AllocationCalculator
         signals={signals}
         strategyStartDate={preferences.portfolio.strategyStartDate}
+        rebalanceFrequency={preferences.portfolio.rebalanceFrequency}
+        concentration={preferences.global.concentration}
       />
     </div>
   );
