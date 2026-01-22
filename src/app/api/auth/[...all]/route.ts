@@ -16,12 +16,15 @@ export const GET = async (req: NextRequest) => {
       console.log(`   - ${c.name}: ${c.value.substring(0, 15)}...`),
     );
 
-    const stateCookie = req.cookies.get("better-auth.state");
+    const stateCookie =
+      req.cookies.get("better-auth.state") ||
+      req.cookies.get("__Secure-better-auth.state");
     const stateParam = req.nextUrl.searchParams.get("state");
 
     console.log("   Checking State Match:");
-    console.log("     Cookie:", stateCookie?.value);
-    console.log("     Param: ", stateParam);
+    console.log("     Cookie Name:", stateCookie?.name);
+    console.log("     Cookie Value:", stateCookie?.value);
+    console.log("     Param Value: ", stateParam);
 
     if (!stateCookie)
       console.error(
