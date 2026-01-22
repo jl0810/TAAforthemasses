@@ -1,6 +1,6 @@
-"use client";
-// Note: This client is designed to work both in Server Actions and client-side (if needed)
-// but primary data fetching should happen on the server.
+// Server-side Tiingo API client
+// This module is used exclusively by Server Actions to fetch market data
+// DO NOT add 'use client' directive - this must remain server-side only
 
 const TIINGO_BASE_URL = "https://api.tiingo.com";
 
