@@ -72,10 +72,10 @@ export function LoginForm() {
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-black font-outfit text-white tracking-tight">
-          Welcome Back
+          Welcome to TAA
         </h1>
         <p className="text-white/40 text-sm">
-          Sign in to access your tactical strategies
+          Sign in or create an account to access your tactical strategies
         </p>
       </div>
 
