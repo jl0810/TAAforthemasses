@@ -51,6 +51,8 @@ export interface MarketSignal {
   history: SignalHistory[];
   performance?: MarketPerformance;
   audit?: CalculationAudit;
+  rank?: number;
+  isTopN?: boolean;
 }
 
 export interface BacktestAudit {
@@ -270,7 +272,16 @@ export async function getMarketSignals(
     }),
   );
 
-  return signals;
+  // Apply Ranking and Concentration Logic
+  const sortedSignals = signals
+    .sort((a, b) => b.buffer - a.buffer)
+    .map((signal, index) => ({
+      ...signal,
+      rank: index + 1,
+      isTopN: index < preferences.global.concentration,
+    }));
+
+  return sortedSignals;
 }
 
 export async function runBacktest(params?: {
@@ -408,6 +419,7 @@ export async function runBacktest(params?: {
           const signalPrice = months[prevIndex].adjClose;
           return {
             symbol,
+            strength: signalPrice / trend - 1,
             isRiskOn: signalPrice > trend,
             assetReturn:
               (months[currentIndex].adjClose - months[prevIndex].adjClose) /
@@ -423,35 +435,50 @@ export async function runBacktest(params?: {
 
       const targetWeight = 1 / concentration;
 
+      // 1. Rank candidates by momentum strength (signalPrice / trend - 1)
+      const rankedCandidates = [...candidates].sort(
+        (a, b) => b.strength - a.strength,
+      );
+
+      // 2. Select the top N assets based on concentration
+      const topNCandidates = rankedCandidates.slice(0, concentration);
+
       if (shouldResetWeights) {
-        // Full reset: Every "Risk-On" asset gets 20%
+        // Full reset to target weights
         currentWeights.clear();
-        candidates.forEach((c) => {
+        topNCandidates.forEach((c) => {
           if (c.isRiskOn) {
             currentWeights.set(c.symbol, targetWeight);
           }
         });
       } else {
         // Drift + Signal Check:
-        // 1. Update existing weights by their return (Drift)
-        const totalWeight = 0;
+
+        // Update existing weights by their return (Drift)
         currentWeights.forEach((weight, symbol) => {
           const c = candidates.find((cand) => cand.symbol === symbol);
           if (c) {
-            const nextWeight = weight * (1 + c.assetReturn);
-            currentWeights.set(symbol, nextWeight);
+            currentWeights.set(symbol, weight * (1 + c.assetReturn));
           }
         });
 
-        // 2. Check for signal flips
-        candidates.forEach((c) => {
-          const hasPosition = currentWeights.has(c.symbol);
-          if (c.isRiskOn && !hasPosition) {
-            // New Entry: Enter at target weight
-            currentWeights.set(c.symbol, targetWeight);
-          } else if (!c.isRiskOn && hasPosition) {
-            // Exit: Sell to cash
-            currentWeights.delete(c.symbol);
+        // Exit logic: If an asset is no longer Risk-On, exit to cash
+        currentWeights.forEach((weight, symbol) => {
+          const c = candidates.find((cand) => cand.symbol === symbol);
+          if (!c || !c.isRiskOn) {
+            currentWeights.delete(symbol);
+          }
+        });
+
+        // Entry logic: If a topN asset is Risk-On and we don't have it, add it strictly at targetWeight
+        topNCandidates.forEach((c) => {
+          if (c.isRiskOn && !currentWeights.has(c.symbol)) {
+            // We only add it if we have effectively "empty" space (Total Weight < 1)
+            let currentTotal = 0;
+            currentWeights.forEach((w) => (currentTotal += w));
+            if (currentTotal < 1 - targetWeight + 0.001) {
+              currentWeights.set(c.symbol, targetWeight);
+            }
           }
         });
       }

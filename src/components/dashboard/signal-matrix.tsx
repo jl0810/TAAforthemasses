@@ -69,14 +69,35 @@ export function SignalMatrix({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
             onClick={() => setSelectedAsset(signal)}
-            className="glass-card p-5 rounded-3xl cursor-pointer hover:border-white/20 transition-all group relative overflow-hidden"
+            className={cn(
+              "glass-card p-5 rounded-3xl cursor-pointer hover:border-white/20 transition-all group relative overflow-hidden border",
+              signal.isTopN && signal.status === "Risk-On"
+                ? "border-indigo-500/50 bg-indigo-500/[0.03] shadow-[0_0_20px_rgba(99,102,241,0.1)]"
+                : "border-white/10",
+              signal.rank === 1 &&
+                signal.status === "Risk-On" &&
+                "ring-1 ring-indigo-500/30",
+            )}
           >
+            {signal.isTopN && (
+              <div
+                className={cn(
+                  "absolute -top-1 -left-1 px-3 py-1 rounded-br-2xl text-[9px] font-black uppercase tracking-tighter z-10",
+                  signal.status === "Risk-On"
+                    ? "bg-indigo-500 text-white shadow-lg"
+                    : "bg-white/10 text-white/40",
+                )}
+              >
+                {signal.rank === 1 ? "Top Leader" : `Rank #${signal.rank}`}
+              </div>
+            )}
+
             <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-20 transition-opacity">
               <History size={16} />
             </div>
 
             <div className="flex justify-between items-start mb-4">
-              <div>
+              <div className={cn(signal.isTopN && "mt-2")}>
                 <span className="text-xs font-bold text-white/30 tracking-tighter uppercase">
                   {signal.name}
                 </span>
@@ -90,6 +111,7 @@ export function SignalMatrix({
                   signal.status === "Risk-On"
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                     : "bg-rose-500/20 text-rose-400 border border-rose-500/30",
+                  signal.isTopN && "mt-2",
                 )}
               >
                 {signal.status}
