@@ -11,6 +11,11 @@ RUN echo "@jl0810:registry=https://npm.pkg.github.com" > .npmrc && \
 COPY package.json package-lock.json ./
 RUN npm install --omit=dev --legacy-peer-deps --ignore-scripts
 
+# Force-fix: Uninstall local deps and install from registry for production deps
+# This prevents symlink conflicts when copying over the standalone folder
+RUN npm uninstall @jl0810/auth @jl0810/db-client @jl0810/messaging && \
+    npm install @jl0810/auth @jl0810/db-client @jl0810/messaging --legacy-peer-deps
+
 # BUILDER
 FROM base AS builder
 ARG GITHUB_TOKEN
