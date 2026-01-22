@@ -18,6 +18,8 @@ export interface UserPreferenceConfig {
   maType: "SMA" | "EMA";
   maLength: 10 | 12;
   concentration: number;
+  strategyStartDate?: string;
+  rebalanceFrequency: "Monthly" | "Yearly";
 }
 
 // Official Ivy Portfolio from Advisor Perspectives
@@ -33,6 +35,8 @@ const DEFAULT_CONFIG: UserPreferenceConfig = {
   maType: "SMA",
   maLength: 10,
   concentration: 5,
+  strategyStartDate: "2026-01-01",
+  rebalanceFrequency: "Monthly",
 };
 
 export async function getUserPreferences(): Promise<UserPreferenceConfig> {

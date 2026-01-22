@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
 
 export const metadata: Metadata = {
-  title: "TAA for the Masses | Quantitative Investment Dashboard",
+  title: "My TAA Portfolio | Quantitative Investment Dashboard",
   description:
     "Democratizing institutional-grade Tactical Asset Allocation signals for retail investors.",
   icons: {

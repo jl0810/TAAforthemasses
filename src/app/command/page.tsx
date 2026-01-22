@@ -3,10 +3,14 @@ import { ShieldCheck } from "lucide-react";
 import { AllocationCalculator } from "@/components/dashboard/allocation-calculator";
 import { getMarketSignals } from "@/app/actions/market";
 import { requireAuth } from "@/lib/auth";
+import { getUserPreferences } from "@/app/actions/user";
 
 export default async function CommandPage() {
   await requireAuth();
-  const signals = await getMarketSignals();
+  const [signals, preferences] = await Promise.all([
+    getMarketSignals(),
+    getUserPreferences(),
+  ]);
 
   return (
     <div className="space-y-10 pb-20">
@@ -25,7 +29,10 @@ export default async function CommandPage() {
         </p>
       </section>
 
-      <AllocationCalculator signals={signals} />
+      <AllocationCalculator
+        signals={signals}
+        strategyStartDate={preferences.strategyStartDate}
+      />
     </div>
   );
 }

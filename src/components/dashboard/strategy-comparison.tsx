@@ -28,6 +28,7 @@ export function StrategyComparison({
     try {
       const data = await runBacktest({
         lookbackYears: lookback,
+        rebalanceFrequency: initialConfig.rebalanceFrequency,
       });
       if (data.error) {
         setError(data.error);
@@ -41,7 +42,7 @@ export function StrategyComparison({
     } finally {
       setLoading(false);
     }
-  }, [lookback]);
+  }, [lookback, initialConfig.rebalanceFrequency]);
 
   useEffect(() => {
     loadData();

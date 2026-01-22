@@ -4,7 +4,7 @@ import { UserAuthForm } from "@/components/auth/user-auth-form";
 import { ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Login | TAA for the Masses",
+  title: "Login | My TAA Portfolio",
   description: "Secure quantitative access",
 };
 

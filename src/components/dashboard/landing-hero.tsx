@@ -30,7 +30,7 @@ export function LandingHero() {
                 We&apos;re Back! 🎉
               </h3>
               <p className="text-white/60 text-sm mt-1">
-                TAA for the Masses has been rebuilt from the ground up with
+                My TAA Portfolio has been rebuilt from the ground up with
                 real-time data, faster signals, and a sleek new interface.
               </p>
             </div>

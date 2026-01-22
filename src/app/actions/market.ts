@@ -25,6 +25,7 @@ export interface MarketPerformance {
 }
 
 export interface SignalHistory {
+  date: string;
   month: string;
   price: number;
   trend: number;
@@ -156,6 +157,7 @@ export async function getMarketSignals(
               : monthTrend;
 
           history.push({
+            date: monthEnds[index].date.toISOString(),
             month: new Date(monthEnds[index].date).toLocaleDateString("en-US", {
               month: "short",
               year: "2-digit",
@@ -227,12 +229,15 @@ export async function runBacktest(params?: {
   concentration?: number;
   benchmark?: string;
   lookbackYears?: number;
+  rebalanceFrequency?: "Monthly" | "Yearly";
 }): Promise<BacktestResult> {
   try {
     const preferences = await getUserPreferences();
     const maType = params?.maType || preferences.maType;
     const maLength = params?.maLength || preferences.maLength;
     const concentration = params?.concentration || preferences.concentration;
+    const rebalanceFrequency =
+      params?.rebalanceFrequency || preferences.rebalanceFrequency || "Monthly";
     const lookbackYears = params?.lookbackYears || 10;
 
     const assets = DEFAULT_IVY_5.map(
@@ -308,6 +313,10 @@ export async function runBacktest(params?: {
     let currentEquity = 100;
     let currentBenchEquity = 100;
 
+    // Simulation Loop
+    // We track relative weights if Yearly rebalancing is enabled
+    const currentWeights = new Map<string, number>();
+
     for (let i = maLength; i < commonMonthKeys.length; i++) {
       const currentMonthKey = commonMonthKeys[i];
       const prevMonthKey = commonMonthKeys[i - 1];
@@ -338,7 +347,6 @@ export async function runBacktest(params?: {
           return {
             symbol,
             isRiskOn: signalPrice > trend,
-            buffer: ((signalPrice - trend) / trend) * 100,
             assetReturn:
               (months[currentIndex].adjClose - months[prevIndex].adjClose) /
               months[prevIndex].adjClose,
@@ -346,11 +354,107 @@ export async function runBacktest(params?: {
         })
         .filter((c): c is NonNullable<typeof c> => c !== null);
 
-      candidates.sort((a, b) => b.buffer - a.buffer);
-      const topN = candidates.slice(0, concentration);
-      const weightPerSlot = 1 / concentration;
-      topN.forEach((c) => {
-        if (c.isRiskOn) monthlyReturn += c.assetReturn * weightPerSlot;
+      // Rebalancing Logic
+      const shouldResetWeights =
+        rebalanceFrequency === "Monthly" ||
+        (rebalanceFrequency === "Yearly" && (i - maLength) % 12 === 0);
+
+      const targetWeight = 1 / concentration;
+
+      if (shouldResetWeights) {
+        // Full reset: Every "Risk-On" asset gets 20%
+        currentWeights.clear();
+        candidates.forEach((c) => {
+          if (c.isRiskOn) {
+            currentWeights.set(c.symbol, targetWeight);
+          }
+        });
+      } else {
+        // Drift + Signal Check:
+        // 1. Update existing weights by their return (Drift)
+        const totalWeight = 0;
+        currentWeights.forEach((weight, symbol) => {
+          const c = candidates.find((cand) => cand.symbol === symbol);
+          if (c) {
+            const nextWeight = weight * (1 + c.assetReturn);
+            currentWeights.set(symbol, nextWeight);
+          }
+        });
+
+        // 2. Check for signal flips
+        candidates.forEach((c) => {
+          const hasPosition = currentWeights.has(c.symbol);
+          if (c.isRiskOn && !hasPosition) {
+            // New Entry: Enter at target weight
+            currentWeights.set(c.symbol, targetWeight);
+          } else if (!c.isRiskOn && hasPosition) {
+            // Exit: Sell to cash
+            currentWeights.delete(c.symbol);
+          }
+        });
+      }
+
+      // Calculate Total Monthly Return from Weights
+      // For Yearly drift, we need to be careful with the denominator
+      // But standard way: Sum (Returns * InitialWeights of the month)
+      currentWeights.forEach((weight, symbol) => {
+        const c = candidates.find((cand) => cand.symbol === symbol);
+        if (c) {
+          // Note: In drift mode, we divide by the sum of weights at START of month to get the month's %
+          // But here, currentWeights is already the drifted weight.
+          // Correct return calculation for drifted weights:
+          // Month's contribution = (WeightEnd - WeightStart) / PortfolioValueStart
+          // Actually, simpler: portfolioReturn = Sum(c.assetReturn * weightAtStartOfMonth)
+          // To get weightAtStartOfMonth, we can just look at what it was BEFORE our drift application
+          // Let's refine this to be more precise:
+        }
+      });
+
+      // Restarting the return calc logic for clarity:
+      monthlyReturn = 0;
+      const totalPortfolioValueStart = 1; // Normalized base
+
+      // Let's re-calculate monthlyReturn based on state at start of month
+      const weightsAtStart = new Map<string, number>();
+      const shouldReset =
+        rebalanceFrequency === "Monthly" || (i - maLength) % 12 === 0;
+
+      if (shouldReset) {
+        candidates.forEach((c) => {
+          if (c.isRiskOn) weightsAtStart.set(c.symbol, targetWeight);
+        });
+      } else {
+        // Copy current weights BEFORE drift
+        currentWeights.forEach((w, s) => weightsAtStart.set(s, w));
+        // Add new entries
+        candidates.forEach((c) => {
+          if (c.isRiskOn && !weightsAtStart.has(c.symbol))
+            weightsAtStart.set(c.symbol, targetWeight);
+          if (!c.isRiskOn && weightsAtStart.has(c.symbol))
+            weightsAtStart.delete(c.symbol);
+        });
+      }
+
+      let startValue = 0;
+      weightsAtStart.forEach((w) => (startValue += w));
+      // Handling Cash: Remaining weight is in cash (return = 0)
+      // Actually, we define "Total Portfolio" as the sum of target slots even if cash.
+      // So if only 2 assets are ON, 60% is cash.
+
+      weightsAtStart.forEach((w, symbol) => {
+        const c = candidates.find((cand) => cand.symbol === symbol);
+        if (c) {
+          monthlyReturn += c.assetReturn * w;
+        }
+      });
+
+      // Update currentWeights for next month (Drift)
+      currentWeights.clear();
+      weightsAtStart.forEach((w, symbol) => {
+        const c = candidates.find((cand) => cand.symbol === symbol);
+        if (c) {
+          currentWeights.set(symbol, w * (1 + c.assetReturn));
+        }
       });
 
       portfolioReturns.push(monthlyReturn * 100);

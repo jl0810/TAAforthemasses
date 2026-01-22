@@ -192,6 +192,24 @@ export function ProfileSettings({ initialConfig, availableETFs }: Props) {
                 <option value="AOA">Aggressive (AOA)</option>
               </select>
             </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+                Rebalance
+              </label>
+              <select
+                value={config.rebalanceFrequency}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    rebalanceFrequency: e.target.value as "Monthly" | "Yearly",
+                  })
+                }
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white"
+              >
+                <option value="Monthly">Monthly Reset</option>
+                <option value="Yearly">Yearly (Drift)</option>
+              </select>
+            </div>
           </div>
         </div>
 
