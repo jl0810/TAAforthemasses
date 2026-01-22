@@ -16,7 +16,6 @@ import { useSession } from "@/lib/auth-client";
 import { LandingHero } from "@/components/dashboard/landing-hero";
 import { StrategyComparison } from "@/components/dashboard/strategy-comparison";
 import { getUserPreferences, UserPreferenceConfig } from "@/app/actions/user";
-import { AllocationCalculator } from "@/components/dashboard/allocation-calculator";
 
 export default function HomePage() {
   const [signals, setSignals] = useState<MarketSignal[]>([]);
@@ -242,24 +241,6 @@ export default function HomePage() {
           onToggleMA={() => {}}
         />
       </section>
-
-      {/* Quick Capital Mapping */}
-      {!loading && signals.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-indigo-500 rounded-full" />
-            <h2 className="text-2xl font-black text-white tracking-tighter">
-              Quick Rebalance
-            </h2>
-          </div>
-          <AllocationCalculator
-            signals={signals}
-            concentration={initialConfig?.global.concentration}
-            rebalanceFrequency={initialConfig?.global.rebalanceFrequency}
-            strategyStartDate={initialConfig?.portfolio.strategyStartDate}
-          />
-        </section>
-      )}
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card p-8 rounded-[2.5rem] relative overflow-hidden">
