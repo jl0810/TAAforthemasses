@@ -85,89 +85,89 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 self-end">
-            <button
-              onClick={() => setUniverse("ivy")}
-              className={cn(
-                "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-tighter",
-                universe === "ivy"
-                  ? "bg-white/10 text-white shadow-xl"
-                  : "text-white/30 hover:text-white/60",
-              )}
-            >
-              Global AA
-            </button>
-            <button
-              onClick={() => setUniverse("sectors")}
-              className={cn(
-                "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-tighter",
-                universe === "sectors"
-                  ? "bg-white/10 text-white shadow-xl"
-                  : "text-white/30 hover:text-white/60",
-              )}
-            >
-              Sectors
-            </button>
-          </div>
-
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={cn(
+            "glass-card p-6 rounded-[2rem] flex items-center gap-6 border-2 min-w-[300px]",
+            loading
+              ? "border-white/10"
+              : isMarketStrong
+                ? "border-emerald-500/40"
+                : "border-rose-500/40",
+          )}
+        >
+          <div
             className={cn(
-              "glass-card p-6 rounded-[2rem] flex items-center gap-6 border-2 min-w-[300px]",
+              "p-4 rounded-2xl",
               loading
-                ? "border-white/10"
+                ? "bg-white/5 text-white/20"
                 : isMarketStrong
-                  ? "border-emerald-500/40"
-                  : "border-rose-500/40",
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "bg-rose-500/20 text-rose-400",
             )}
           >
+            {loading ? (
+              <ShieldCheck className="animate-spin" />
+            ) : isMarketStrong ? (
+              <Rocket size={40} strokeWidth={2.5} />
+            ) : (
+              <AlertTriangle size={40} strokeWidth={2.5} />
+            )}
+          </div>
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 mb-1">
+              Current Regime
+            </div>
             <div
               className={cn(
-                "p-4 rounded-2xl",
+                "text-3xl font-black font-outfit tracking-tighter mb-2",
                 loading
-                  ? "bg-white/5 text-white/20"
+                  ? "text-white/10"
                   : isMarketStrong
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : "bg-rose-500/20 text-rose-400",
+                    ? "text-emerald-400"
+                    : "text-rose-400",
               )}
             >
-              {loading ? (
-                <ShieldCheck className="animate-spin" />
-              ) : isMarketStrong ? (
-                <Rocket size={40} strokeWidth={2.5} />
-              ) : (
-                <AlertTriangle size={40} strokeWidth={2.5} />
-              )}
+              {loading
+                ? "FETCHING..."
+                : isMarketStrong
+                  ? "RISK ON"
+                  : "RISK OFF"}
             </div>
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
-                Current Regime
-              </div>
-              <div
-                className={cn(
-                  "text-3xl font-black font-outfit tracking-tighter",
-                  loading
-                    ? "text-white/10"
-                    : isMarketStrong
-                      ? "text-emerald-400"
-                      : "text-rose-400",
-                )}
-              >
-                {loading
-                  ? "FETCHING..."
-                  : isMarketStrong
-                    ? "RISK ON"
-                    : "RISK OFF"}
-              </div>
-              <div className="text-xs text-white/40 font-medium">
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-white/40 font-medium whitespace-nowrap">
                 {universe === "ivy" ? "Ivy 5" : "Sector"} Coverage:{" "}
-                {riskOnCount}/{universe === "ivy" ? 5 : 9} Leg Active
+                {riskOnCount}/{universe === "ivy" ? 5 : 9}
+              </div>
+              <div className="h-4 w-px bg-white/10" />
+              <div className="flex bg-white/5 p-0.5 rounded-lg border border-white/5">
+                <button
+                  onClick={() => setUniverse("ivy")}
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[8px] font-black uppercase transition-all tracking-tighter",
+                    universe === "ivy"
+                      ? "bg-white/20 text-white"
+                      : "text-white/20 hover:text-white/40",
+                  )}
+                >
+                  Global
+                </button>
+                <button
+                  onClick={() => setUniverse("sectors")}
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[8px] font-black uppercase transition-all tracking-tighter",
+                    universe === "sectors"
+                      ? "bg-white/20 text-white"
+                      : "text-white/20 hover:text-white/40",
+                  )}
+                >
+                  Sector
+                </button>
               </div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </section>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
