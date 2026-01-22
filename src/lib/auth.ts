@@ -28,11 +28,8 @@ export const auth = createAuth(
     },
     advanced: {
       trustedOrigins: ["http://localhost:3000", "https://taaforthemasses.com"],
+      disableCSRFCheck: true, // TRIGGER: Bypass state verification for debugging
       useSecureCookies: true,
-      crossSubdomainCookies: {
-        enabled: true,
-        domain: "taaforthemasses.com", // Explicit domain to prevent sub-domain/host mismatch
-      },
       defaultCookieAttributes: {
         secure: true,
         sameSite: "none",
