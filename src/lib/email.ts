@@ -39,81 +39,15 @@ export class EmailService {
     userName: string,
   ): Promise<EmailConfig> {
     const dashboardUrl = `${this.baseUrl}/`;
-    let html: string;
-
-    try {
-      html = await renderWelcomeEmail({
-        branding,
-        userName,
-        dashboardUrl,
-      });
-
-      // React 19 / Next.js 15+ streaming error detection
-      if (
-        html.includes("Objects are not valid as a React child") ||
-        html.includes("Switched to client rendering")
-      ) {
-        throw new Error("Render failed");
-      }
-    } catch (e) {
-      console.warn("⚠️ Email rendering failed, using fallback template:", e);
-      html = `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <img src="${branding.logoUrl}" alt="${branding.appName}" style="width: 48px; height: 48px; border-radius: 8px;" />
-                    <h1 style="color: #333;">Welcome to ${branding.appName}, ${userName}! 🚀</h1>
-                    <p>We're excited to have you on board.</p>
-                    <a href="${dashboardUrl}" style="display: inline-block; background-color: ${branding.brandingColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Go to Dashboard</a>
-                    <p>If you have any questions, reply to this email.</p>
-                </div>
-            `;
-    }
+    const html = await renderWelcomeEmail({
+      branding,
+      userName,
+      dashboardUrl,
+    });
 
     return {
       to: email,
       subject: `Welcome to ${branding.appName}, ${userName}! 🚀`,
-      html,
-    };
-  }
-
-  /**
-   * Send magic link email
-   */
-  static async sendMagicLinkEmail(
-    email: string,
-    magicLink: string,
-  ): Promise<EmailConfig> {
-    let html: string;
-
-    try {
-      html = await renderMagicLinkEmail({
-        magicLink,
-        branding,
-        userEmail: email,
-      });
-
-      // React 19 / Next.js 15+ streaming error detection
-      if (
-        html.includes("Objects are not valid as a React child") ||
-        html.includes("Switched to client rendering")
-      ) {
-        throw new Error("Render failed");
-      }
-    } catch (e) {
-      console.warn("⚠️ Email rendering failed, using fallback template:", e);
-      html = `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <img src="${branding.logoUrl}" alt="${branding.appName}" style="width: 48px; height: 48px; border-radius: 8px;" />
-                    <h1 style="color: #333;">Sign in to ${branding.appName}</h1>
-                    <p>Click the button below to sign in:</p>
-                    <a href="${magicLink}" style="display: inline-block; background-color: ${branding.brandingColor}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Sign In</a>
-                    <p style="margin-top: 20px; font-size: 12px; color: #666;">Or copy this link: <br/><a href="${magicLink}">${magicLink}</a></p>
-                </div>
-            `;
-    }
-
-    return {
-      to: email,
-      subject: `Sign in to ${branding.appName}`,
       html,
     };
   }
