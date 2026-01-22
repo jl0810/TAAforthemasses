@@ -24,7 +24,7 @@
     ]
   },
   "dependencies": {
-    "@jl0810/auth": "^0.0.12",
+    "@jl0810/auth": "file:../platform/packages/auth",
     "@jl0810/db-client": "^1.3.2",
     "@jl0810/messaging": "file:../platform/packages/messaging",
     "@paralleldrive/cuid2": "^3.0.6",
