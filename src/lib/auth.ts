@@ -1,6 +1,7 @@
 import { createAuth, createGetSession, createRequireAuth } from "@jl0810/auth";
-import { db, schema } from "@/lib/db";
+import { db } from "@/lib/db";
 import { userProfiles } from "@jl0810/db-client";
+import { EmailService } from "@/lib/email";
 
 export const auth = createAuth(
   {
@@ -20,6 +21,25 @@ export const auth = createAuth(
     },
     advanced: {
       trustedOrigins: ["http://localhost:3000", "https://taaforthemasses.com"],
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user: unknown) => {
+            const typedUser = user as { email: string; name?: string };
+            console.log(
+              `[Auth] New user created: ${typedUser.email}. Sending welcome email.`,
+            );
+            // Fire and forget - don't block the auth response
+            EmailService.sendWelcomeEmail(
+              typedUser.email,
+              typedUser.name || "User",
+            ).catch((err) => {
+              console.error("[Auth] Failed to send welcome email:", err);
+            });
+          },
+        },
+      },
     },
   },
 );

@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { useSession, signOut } from "@/lib/auth-client";
-import { UserCircle, LogOut, Settings, LogIn } from "lucide-react";
+import { LogOut, Settings, LogIn, Trash2 } from "lucide-react";
+import { deleteAccount } from "@/app/actions/auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +66,27 @@ export function UserButton() {
             <Settings className="mr-2 h-4 w-4" />
             <span>Preferences</span>
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="text-amber-400 focus:text-amber-400 focus:bg-amber-500/10 cursor-pointer"
+          onClick={async (e) => {
+            e.preventDefault();
+            if (
+              window.confirm(
+                "Are you sure you want to delete your account? This action cannot be undone.",
+              )
+            ) {
+              const result = await deleteAccount();
+              if (result.success) {
+                window.location.href = "/";
+              } else {
+                alert("Failed to delete account. Please try again.");
+              }
+            }
+          }}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          <span>Delete Account</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-white/10" />
         <DropdownMenuItem
