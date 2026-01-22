@@ -3,7 +3,7 @@
 import { db } from "@/lib/db";
 import { marketPrices } from "@/db/schema/tables";
 import { eq, gte, desc, asc, and, inArray } from "drizzle-orm";
-import { fetchHistoricalPrices } from "@/lib/integrations/tiingo-client";
+import { getSpotPrice } from "@/lib/integrations/yahoo-client";
 import {
   calculateMovingAverage,
   calculateSafetyBuffer,
@@ -113,14 +113,20 @@ export async function getMarketSignals(
         }
 
         const rawPrices = historicalData.reverse();
-        const today = new Date().toISOString().split("T")[0];
-        const spotData = await fetchHistoricalPrices(asset.symbol, {
-          startDate: today,
-        });
+
+        // Try to get live/spot price from Yahoo
+        const yahooPrice = await getSpotPrice(asset.symbol);
+
+        // Fallback checks:
+        // 1. Yahoo Spot
+        // 2. Database last close
+        // (Removed Tiingo daily check to save calls)
+
         const currentPrice =
-          spotData.length > 0
-            ? spotData[spotData.length - 1].adjClose
+          yahooPrice !== null
+            ? yahooPrice
             : rawPrices[rawPrices.length - 1].adjClose;
+
         const monthEnds = getMonthEndPrices(rawPrices);
 
         if (monthEnds.length < maLength + 1)
@@ -400,7 +406,6 @@ export async function runBacktest(params?: {
     // Filter returns corresponding to the sliced period
     // Returns array aligns with curve index 1..N (since curve[0] is start)
     // We can just filter returns based on the dates in the pruned curve (excluding the very first "Start" point date check if needed, but simplest is to keep count)
-    const curveDates = new Set(finalEquityCurve.map((p) => p.date));
     const finalPortfolioReturns: number[] = [];
     const finalBenchmarkReturns: number[] = [];
 
