@@ -85,6 +85,7 @@ export async function updateUserPreferences(config: UserPreferenceConfig) {
 const ETF_METADATA: Record<string, { name: string; category: string }> = {
   // Ivy Portfolio Core
   VTI: { name: "Vanguard Total Stock Market", category: "US Stocks" },
+  SPY: { name: "SPDR S&P 500 ETF Trust", category: "US Stocks" },
   VEU: { name: "Vanguard FTSE All-World ex-US", category: "Intl Stocks" },
   VEA: { name: "Vanguard FTSE Developed Markets", category: "Intl Stocks" },
   VWO: { name: "Vanguard FTSE Emerging Markets", category: "Intl Stocks" },
