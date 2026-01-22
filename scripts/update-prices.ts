@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { db } from "@/lib/db";
 import { marketPrices } from "@/db/schema/tables";
 import { fetchHistoricalPrices } from "@/lib/integrations/tiingo-client";
@@ -56,9 +57,8 @@ async function main() {
   console.log(
     `🚀 Starting nightly price update for ${UNIVERSE.length} assets...`,
   );
-  const apiKey = process.env.TIINGO_API_KEY;
-  if (!apiKey) {
-    console.error("❌ TIINGO_API_KEY is missing. Aborting.");
+  if (!process.env.TIINGO_API_KEY && !process.env.TIINGO_API_KEY2) {
+    console.error("❌ No TIINGO_API_KEYs found. Aborting.");
     process.exit(1);
   }
 
