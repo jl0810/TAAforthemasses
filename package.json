@@ -11,6 +11,7 @@
     "deploy": "git push && .husky/post-push",
     "prepare": "husky",
     "lint-staged": "lint-staged",
+    "test": "jest",
     "env:push": "tsx ../platform/scripts/push-env.ts",
     "script:update-prices": "tsx scripts/update-prices.ts"
   },
