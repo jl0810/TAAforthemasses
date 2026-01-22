@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Activity, PlayCircle, ShieldCheck, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
 
 const NAV_ITEMS = [
   {
@@ -32,6 +33,12 @@ const NAV_ITEMS = [
 
 export function NavDock() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  // Hide nav on landing page (when not logged in)
+  if (!session) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
