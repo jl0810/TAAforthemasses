@@ -55,6 +55,11 @@ export const auth = createAuth(
         },
       },
     },
+    user: {
+      deleteUser: {
+        enabled: true,
+      },
+    },
   },
 );
 

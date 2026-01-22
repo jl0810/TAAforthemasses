@@ -14,9 +14,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export function UserButton() {
   const { data: session, isPending } = useSession();
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   if (isPending) {
     return <div className="w-9 h-9 rounded-full bg-white/10 animate-pulse" />;
@@ -68,25 +72,33 @@ export function UserButton() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="text-amber-400 focus:text-amber-400 focus:bg-amber-500/10 cursor-pointer"
+          className={cn(
+            "cursor-pointer focus:bg-rose-500/10",
+            showConfirmDelete
+              ? "text-rose-500 focus:text-rose-500 font-bold bg-rose-500/10"
+              : "text-rose-400 focus:text-rose-400",
+          )}
           onClick={async (e) => {
             e.preventDefault();
-            if (
-              window.confirm(
-                "Are you sure you want to delete your account? This action cannot be undone.",
-              )
-            ) {
-              const result = await deleteAccount();
-              if (result.success) {
-                window.location.href = "/";
-              } else {
-                alert("Failed to delete account. Please try again.");
-              }
+            if (!showConfirmDelete) {
+              setShowConfirmDelete(true);
+              // Reset after 3 seconds if not confirmed
+              setTimeout(() => setShowConfirmDelete(false), 3000);
+              return;
+            }
+
+            const result = await deleteAccount();
+            if (result.success) {
+              window.location.href = "/";
+            } else {
+              toast.error("Failed to delete account");
             }
           }}
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          <span>Delete Account</span>
+          <span>
+            {showConfirmDelete ? "Confirm Delete?" : "Delete Account"}
+          </span>
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-white/10" />
         <DropdownMenuItem
