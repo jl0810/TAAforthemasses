@@ -124,7 +124,7 @@ export function SignalMatrix({
             <div className="space-y-3">
               <div className="flex justify-between items-end">
                 <span className="text-xs text-white/40">Price</span>
-                <span className="text-lg font-mono font-medium">
+                <span className="text-lg font-mono font-medium text-white">
                   ${signal.price.toFixed(2)}
                 </span>
               </div>
