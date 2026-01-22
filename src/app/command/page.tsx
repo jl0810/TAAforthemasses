@@ -1,8 +1,13 @@
 import React from "react";
 import { ShieldCheck } from "lucide-react";
 import { AllocationCalculator } from "@/components/dashboard/allocation-calculator";
+import { getMarketSignals } from "@/app/actions/market";
+import { requireAuth } from "@/lib/auth";
 
-export default function CommandPage() {
+export default async function CommandPage() {
+  await requireAuth();
+  const signals = await getMarketSignals();
+
   return (
     <div className="space-y-10 pb-20">
       <section>
@@ -20,7 +25,7 @@ export default function CommandPage() {
         </p>
       </section>
 
-      <AllocationCalculator />
+      <AllocationCalculator signals={signals} />
     </div>
   );
 }
