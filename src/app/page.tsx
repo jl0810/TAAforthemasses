@@ -54,6 +54,37 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10 pb-10">
+      {/* 🚀 COMEBACK ANNOUNCEMENT */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-[2.5rem] p-8 bg-gradient-to-br from-emerald-500/20 via-indigo-500/20 to-purple-500/20 border-2 border-emerald-500/30"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(16,185,129,0.1),transparent)]" />
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center ring-2 ring-emerald-500/50">
+              <Rocket className="text-emerald-400" size={24} />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black font-outfit text-white tracking-tight">
+                We&apos;re Back! 🎉
+              </h3>
+              <p className="text-white/60 text-sm mt-1">
+                TAA for the Masses has been rebuilt from the ground up with
+                real-time data, faster signals, and a sleek new interface.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 border border-white/10">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-400 font-bold text-sm uppercase tracking-wider">
+              Live Now
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Header / Hero */}
       <section className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
         <div>
