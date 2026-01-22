@@ -9,6 +9,8 @@ import {
   TrendingUp,
   AlertTriangle,
   ArrowUpRight,
+  FlaskConical,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMarketSignals, MarketSignal } from "@/app/actions/market";
@@ -24,6 +26,10 @@ export default function HomePage() {
   const [maType, setMaType] = useState<"SMA" | "EMA">("SMA");
   const [initialConfig, setInitialConfig] =
     useState<UserPreferenceConfig | null>(null);
+  const [isResearchMode, setIsResearchMode] = useState(false);
+  const [rebalanceFreqOverride, setRebalanceFreqOverride] = useState<
+    "Monthly" | "Yearly"
+  >("Monthly");
 
   useEffect(() => {
     async function loadInitialData() {
@@ -31,6 +37,7 @@ export default function HomePage() {
         const config = await getUserPreferences();
         setInitialConfig(config);
         setMaType(config.maType);
+        setRebalanceFreqOverride(config.rebalanceFrequency || "Monthly");
       } catch (e) {
         console.error("Failed to load user preferences:", e);
       }
@@ -79,61 +86,97 @@ export default function HomePage() {
           </p>
         </div>
 
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className={cn(
-            "glass-card p-6 rounded-[2rem] flex items-center gap-6 border-2",
-            loading
-              ? "border-white/10"
-              : isMarketStrong
-                ? "border-emerald-500/40"
-                : "border-rose-500/40",
-          )}
-        >
-          <div
-            className={cn(
-              "p-4 rounded-2xl",
-              loading
-                ? "bg-white/5 text-white/20"
-                : isMarketStrong
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-rose-500/20 text-rose-400",
-            )}
-          >
-            {loading ? (
-              <ShieldCheck className="animate-spin" />
-            ) : isMarketStrong ? (
-              <Rocket size={40} strokeWidth={2.5} />
-            ) : (
-              <AlertTriangle size={40} strokeWidth={2.5} />
-            )}
-          </div>
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
-              Current Regime
-            </div>
-            <div
+        <div className="flex flex-col gap-4">
+          {/* Research Mode Toggle */}
+          <div className="flex items-center gap-3 self-end">
+            <span
               className={cn(
-                "text-3xl font-black font-outfit tracking-tighter",
-                loading
-                  ? "text-white/10"
-                  : isMarketStrong
-                    ? "text-emerald-400"
-                    : "text-rose-400",
+                "text-[10px] font-black uppercase tracking-widest transition-colors",
+                isResearchMode ? "text-indigo-400" : "text-white/20",
               )}
             >
-              {loading
-                ? "FETCHING..."
-                : isMarketStrong
-                  ? "RISK ON"
-                  : "RISK OFF"}
-            </div>
-            <div className="text-xs text-white/40 font-medium">
-              Ivy 5 Coverage: {riskOnCount}/5 Leg Active
-            </div>
+              {isResearchMode ? "Research Active" : "Portfolio Mode"}
+            </span>
+            <button
+              onClick={() => setIsResearchMode(!isResearchMode)}
+              className={cn(
+                "w-12 h-6 rounded-full relative transition-all duration-300 border",
+                isResearchMode
+                  ? "bg-indigo-500/20 border-indigo-500/50"
+                  : "bg-white/5 border-white/10",
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-1 w-4 h-4 rounded-full transition-all duration-300 flex items-center justify-center",
+                  isResearchMode
+                    ? "left-7 bg-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.5)]"
+                    : "left-1 bg-white/20",
+                )}
+              >
+                {isResearchMode && (
+                  <FlaskConical size={8} className="text-white" />
+                )}
+              </div>
+            </button>
           </div>
-        </motion.div>
+
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={cn(
+              "glass-card p-6 rounded-[2rem] flex items-center gap-6 border-2 min-w-[300px]",
+              loading
+                ? "border-white/10"
+                : isMarketStrong
+                  ? "border-emerald-500/40"
+                  : "border-rose-500/40",
+            )}
+          >
+            <div
+              className={cn(
+                "p-4 rounded-2xl",
+                loading
+                  ? "bg-white/5 text-white/20"
+                  : isMarketStrong
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-rose-500/20 text-rose-400",
+              )}
+            >
+              {loading ? (
+                <ShieldCheck className="animate-spin" />
+              ) : isMarketStrong ? (
+                <Rocket size={40} strokeWidth={2.5} />
+              ) : (
+                <AlertTriangle size={40} strokeWidth={2.5} />
+              )}
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+                Current Regime
+              </div>
+              <div
+                className={cn(
+                  "text-3xl font-black font-outfit tracking-tighter",
+                  loading
+                    ? "text-white/10"
+                    : isMarketStrong
+                      ? "text-emerald-400"
+                      : "text-rose-400",
+                )}
+              >
+                {loading
+                  ? "FETCHING..."
+                  : isMarketStrong
+                    ? "RISK ON"
+                    : "RISK OFF"}
+              </div>
+              <div className="text-xs text-white/40 font-medium">
+                Ivy 5 Coverage: {riskOnCount}/5 Leg Active
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -199,12 +242,45 @@ export default function HomePage() {
         })}
       </section>
 
-      <section>
+      <section className="relative">
+        {isResearchMode && (
+          <div className="absolute -top-12 left-0 right-0 flex justify-center z-10">
+            <div className="bg-indigo-500 text-white text-[9px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg animate-pulse border border-indigo-400">
+              Simulation Override Active
+            </div>
+          </div>
+        )}
+        <div className="mb-6 flex justify-between items-center">
+          <div />
+          {isResearchMode && (
+            <div className="flex items-center gap-4 bg-white/5 p-1 rounded-2xl border border-white/10">
+              <span className="text-[9px] font-black text-white/20 uppercase tracking-widest pl-3 pr-2">
+                Sim Freq:
+              </span>
+              {(["Monthly", "Yearly"] as const).map((freq) => (
+                <button
+                  key={freq}
+                  onClick={() => setRebalanceFreqOverride(freq)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-tighter",
+                    rebalanceFreqOverride === freq
+                      ? "bg-white/10 text-white shadow-xl"
+                      : "text-white/30 hover:text-white/60",
+                  )}
+                >
+                  {freq}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <SignalMatrix
           signals={signals}
           loading={loading}
           maType={maType}
-          onToggleMA={setMaType}
+          onToggleMA={(type) => {
+            if (isResearchMode) setMaType(type);
+          }}
         />
       </section>
 
@@ -290,7 +366,17 @@ export default function HomePage() {
       </section>
 
       <section>
-        {initialConfig && <StrategyComparison initialConfig={initialConfig} />}
+        {initialConfig && (
+          <StrategyComparison
+            initialConfig={{
+              ...initialConfig,
+              rebalanceFrequency: isResearchMode
+                ? rebalanceFreqOverride
+                : initialConfig.rebalanceFrequency,
+              maType: isResearchMode ? maType : initialConfig.maType,
+            }}
+          />
+        )}
       </section>
     </div>
   );

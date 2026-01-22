@@ -24,6 +24,13 @@ export interface MarketPerformance {
   volatility: number;
 }
 
+export interface CalculationAudit {
+  price: number;
+  trend: number;
+  buffer: number;
+  formula: string;
+}
+
 export interface SignalHistory {
   date: string;
   month: string;
@@ -43,6 +50,16 @@ export interface MarketSignal {
   lastUpdated: string;
   history: SignalHistory[];
   performance?: MarketPerformance;
+  audit?: CalculationAudit;
+}
+
+export interface BacktestAudit {
+  date: string;
+  symbol: string;
+  weight: number;
+  price: number;
+  trend: number;
+  reason: string;
 }
 
 export interface BacktestResult {
@@ -52,6 +69,7 @@ export interface BacktestResult {
   monthlyReturns: number[];
   performance: MarketPerformance;
   benchmarkPerformance: MarketPerformance;
+  auditLog: BacktestAudit[];
   error?: string;
 }
 
@@ -209,6 +227,12 @@ export async function getMarketSignals(
               Math.sqrt(12) *
               100,
           },
+          audit: {
+            price: currentPrice,
+            trend: currentTrend,
+            buffer: buffer,
+            formula: "(Price / Trend) - 1",
+          },
         } as MarketSignal;
       } catch (error) {
         console.error(
@@ -316,6 +340,7 @@ export async function runBacktest(params?: {
     // Simulation Loop
     // We track relative weights if Yearly rebalancing is enabled
     const currentWeights = new Map<string, number>();
+    const auditLog: BacktestAudit[] = [];
 
     for (let i = maLength; i < commonMonthKeys.length; i++) {
       const currentMonthKey = commonMonthKeys[i];
@@ -434,6 +459,21 @@ export async function runBacktest(params?: {
             weightsAtStart.delete(c.symbol);
         });
       }
+
+      // Add to audit log
+      candidates.forEach((c) => {
+        const w = weightsAtStart.get(c.symbol) || 0;
+        if (w > 0 || c.isRiskOn) {
+          auditLog.push({
+            date: currentMonthKey,
+            symbol: c.symbol,
+            weight: w,
+            price: c.assetReturn, // This is relative return, maybe store actual price if needed, but return is better for math
+            trend: 0, // Not stored in backtest loop easily without re-calc
+            reason: w > 0 ? "Target Weight" : "Stay Cash (Risk-Off)",
+          });
+        }
+      });
 
       let startValue = 0;
       weightsAtStart.forEach((w) => (startValue += w));
@@ -569,6 +609,7 @@ export async function runBacktest(params?: {
           Math.sqrt(12) *
           100,
       },
+      auditLog: auditLog.filter((a) => a.date >= cutoffKey),
     };
   } catch (error) {
     console.error("[runBacktest] Crash:", error);
@@ -591,6 +632,7 @@ export async function runBacktest(params?: {
         maxDrawdown: 0,
         volatility: 0,
       },
+      auditLog: [],
       error:
         error instanceof Error ? error.message : "An unexpected error occurred",
     };

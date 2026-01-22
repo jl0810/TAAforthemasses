@@ -10,7 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MarketSignal, SignalHistory } from "@/app/actions/market";
+import { MarketSignal } from "@/app/actions/market";
+import { AuditTrail } from "./audit-trail";
 
 interface SignalMatrixProps {
   signals: MarketSignal[];
@@ -183,6 +184,13 @@ export function SignalMatrix({
                 <p className="text-white/40 text-sm mt-1">
                   Last 12 Monthly Trend Signals ({maType}-10)
                 </p>
+                {selectedAsset.audit && (
+                  <AuditTrail
+                    type="signal"
+                    audit={selectedAsset.audit}
+                    className="mt-6"
+                  />
+                )}
               </div>
 
               {selectedAsset.performance && (
@@ -243,7 +251,7 @@ export function SignalMatrix({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {selectedAsset.history.map((h, i) => (
+                  {selectedAsset.history.map((h) => (
                     <tr key={h.month} className="group hover:bg-white/[0.02]">
                       <td className="py-4 text-sm font-medium text-white/80">
                         {h.month}

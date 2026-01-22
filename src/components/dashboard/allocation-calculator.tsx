@@ -8,7 +8,6 @@ import {
   DollarSign,
   Target as TargetIcon,
   FileText,
-  ChevronRight,
   TrendingUp,
   Info,
 } from "lucide-react";
@@ -39,6 +38,7 @@ export function AllocationCalculator({
       actionColor: string;
       status: string;
       amount: number;
+      audit?: Record<string, unknown>;
     }[] = [];
     const cutoffDate = strategyStartDate
       ? new Date(strategyStartDate)
@@ -120,6 +120,9 @@ export function AllocationCalculator({
           actionColor,
           status: hist.status,
           amount: allocation * 0.2, // Fixed 20% slice
+          audit: s.audit
+            ? { ...s.audit, price: hist.price, trend: hist.trend }
+            : undefined,
         });
       });
     }
@@ -255,76 +258,120 @@ export function AllocationCalculator({
             </thead>
             <tbody className="divide-y divide-white/5">
               {ledger.map((trade, idx) => (
-                <tr
+                <React.Fragment
                   key={`${trade.dateLabel}-${trade.ticker}-${idx}`}
-                  className="group hover:bg-white/[0.03] transition-colors border-l-4 border-l-transparent hover:border-l-emerald-500/50"
                 >
-                  <td className="px-8 py-6">
-                    <div className="text-xs font-mono text-white/60 uppercase">
-                      {trade.dateLabel}
-                    </div>
-                  </td>
-                  <td className="px-6 py-6">
-                    <div className="flex items-center gap-4">
+                  <tr className="group hover:bg-white/[0.03] transition-colors border-l-4 border-l-transparent hover:border-l-emerald-500/50">
+                    <td className="px-8 py-6">
+                      <div className="text-xs font-mono text-white/60 uppercase">
+                        {trade.dateLabel}
+                      </div>
+                    </td>
+                    <td className="px-6 py-6">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={cn(
+                            "w-10 h-10 flex items-center justify-center rounded-xl font-black text-[10px] transition-transform group-hover:scale-110",
+                            trade.status === "Risk-On"
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                              : "bg-white/5 text-white/40 border border-white/5",
+                          )}
+                        >
+                          {trade.ticker}
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-white">
+                            {trade.name}
+                          </div>
+                          <div className="text-[10px] text-white/40 font-mono tracking-tighter uppercase">
+                            Price: ${trade.price.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-right">
+                      <div className="text-sm font-black text-white font-mono">
+                        {trade.status === "Risk-On"
+                          ? (trade.amount / trade.price).toFixed(2)
+                          : "0.00"}
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-center">
                       <div
                         className={cn(
-                          "w-10 h-10 flex items-center justify-center rounded-xl font-black text-[10px] transition-transform group-hover:scale-110",
-                          trade.status === "Risk-On"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : "bg-white/5 text-white/40 border border-white/5",
+                          "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg inline-block whitespace-nowrap",
+                          trade.actionColor,
                         )}
                       >
-                        {trade.ticker}
+                        {trade.instruction}
                       </div>
-                      <div>
-                        <div className="text-xs font-black text-white">
-                          {trade.name}
+                    </td>
+                    <td className="px-6 py-6">
+                      <div className="text-[10px] font-bold text-white/40 italic">
+                        {trade.rationale}
+                      </div>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div
+                        className={cn(
+                          "text-xl font-black font-outfit tracking-tighter leading-none",
+                          trade.status === "Risk-On"
+                            ? "text-emerald-400"
+                            : "text-indigo-400/50",
+                        )}
+                      >
+                        $
+                        {trade.amount.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    </td>
+                  </tr>
+                  <tr className="bg-white/[0.01]">
+                    <td colSpan={6} className="px-8 py-0">
+                      <div className="flex items-center gap-6 py-4 border-t border-white/[0.02]">
+                        <div className="text-[9px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
+                          <Calculator size={10} />
+                          Math Trace
                         </div>
-                        <div className="text-[10px] text-white/40 font-mono tracking-tighter uppercase">
-                          Price: ${trade.price.toFixed(2)}
+                        <div className="flex gap-4">
+                          <div className="text-[10px] text-white/40">
+                            Price:{" "}
+                            <span className="font-mono text-white">
+                              ${trade.price.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-white/40">
+                            Trend:{" "}
+                            <span className="font-mono text-white">
+                              ${trade.trend.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-white/40">
+                            Buffer:{" "}
+                            <span
+                              className={cn(
+                                "font-black font-mono",
+                                trade.price > trade.trend
+                                  ? "text-emerald-400"
+                                  : "text-rose-400",
+                              )}
+                            >
+                              {((trade.price / trade.trend - 1) * 100).toFixed(
+                                2,
+                              )}
+                              %
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-white/20 font-mono italic">
+                            (P / T) - 1 = Buffer
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-6 text-right">
-                    <div className="text-sm font-black text-white font-mono">
-                      {trade.status === "Risk-On"
-                        ? (trade.amount / trade.price).toFixed(2)
-                        : "0.00"}
-                    </div>
-                  </td>
-                  <td className="px-6 py-6 text-center">
-                    <div
-                      className={cn(
-                        "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg inline-block whitespace-nowrap",
-                        trade.actionColor,
-                      )}
-                    >
-                      {trade.instruction}
-                    </div>
-                  </td>
-                  <td className="px-6 py-6">
-                    <div className="text-[10px] font-bold text-white/40 italic">
-                      {trade.rationale}
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div
-                      className={cn(
-                        "text-xl font-black font-outfit tracking-tighter leading-none",
-                        trade.status === "Risk-On"
-                          ? "text-emerald-400"
-                          : "text-indigo-400/50",
-                      )}
-                    >
-                      $
-                      {trade.amount.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
