@@ -376,28 +376,83 @@ export async function runBacktest(params?: {
       }
     }
 
+    // SLICE RESULTS TO EXACT LOOKBACK PERIOD
+    // The simulation runs on extra data (lookback + 4 vars) to warm up MAs.
+    // We must trim the output to show ONLY the requested timeframe.
+    const cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - lookbackYears);
+    const cutoffIso = cutoffDate.toISOString().split("T")[0];
+
+    const filterCurve = (curve: { date: string; value: number }[]) => {
+      const sliced = curve.filter((p) => p.date >= cutoffIso);
+      if (sliced.length === 0) return curve; // Fallback
+      // Re-base to 100
+      const startVal = sliced[0].value;
+      return sliced.map((p) => ({
+        date: p.date,
+        value: (p.value / startVal) * 100,
+      }));
+    };
+
+    const finalEquityCurve = filterCurve(equityCurve);
+    const finalBenchmarkCurve = filterCurve(benchmarkCurve);
+
+    // Filter returns corresponding to the sliced period
+    // Returns array aligns with curve index 1..N (since curve[0] is start)
+    // We can just filter returns based on the dates in the pruned curve (excluding the very first "Start" point date check if needed, but simplest is to keep count)
+    const curveDates = new Set(finalEquityCurve.map((p) => p.date));
+    const finalPortfolioReturns: number[] = [];
+    const finalBenchmarkReturns: number[] = [];
+
+    // Re-build returns arrays based on the sliced curves to ensure alignment
+    // (Simpler than mapping dates back to the returns array indices)
+    for (let i = 1; i < finalEquityCurve.length; i++) {
+      const ret =
+        (finalEquityCurve[i].value - finalEquityCurve[i - 1].value) /
+        finalEquityCurve[i - 1].value;
+      finalPortfolioReturns.push(ret * 100);
+    }
+    for (let i = 1; i < finalBenchmarkCurve.length; i++) {
+      const ret =
+        (finalBenchmarkCurve[i].value - finalBenchmarkCurve[i - 1].value) /
+        finalBenchmarkCurve[i - 1].value;
+      finalBenchmarkReturns.push(ret * 100);
+    }
+
+    // Safety check if empty (e.g. lookback > history)
+    const safePortReturns =
+      finalPortfolioReturns.length > 0
+        ? finalPortfolioReturns
+        : portfolioReturns;
+    const safeBenchReturns =
+      finalBenchmarkReturns.length > 0
+        ? finalBenchmarkReturns
+        : benchmarkReturns;
+
     return {
       symbol: "Strategy Portfolio",
-      equityCurve,
-      benchmarkCurve,
-      monthlyReturns: portfolioReturns,
+      equityCurve: finalEquityCurve,
+      benchmarkCurve: finalBenchmarkCurve,
+      monthlyReturns: safePortReturns,
       performance: {
-        sharpeRatio: calculateSharpeRatio(portfolioReturns),
-        sortinoRatio: calculateSortinoRatio(portfolioReturns),
-        cagr: calculateAnnualizedReturn(portfolioReturns),
-        maxDrawdown: calculateMaxDrawdown(equityCurve.map((e) => e.value)),
+        sharpeRatio: calculateSharpeRatio(safePortReturns),
+        sortinoRatio: calculateSortinoRatio(safePortReturns),
+        cagr: calculateAnnualizedReturn(safePortReturns),
+        maxDrawdown: calculateMaxDrawdown(finalEquityCurve.map((e) => e.value)),
         volatility:
-          calculateStandardDeviation(portfolioReturns.map((r) => r / 100)) *
+          calculateStandardDeviation(safePortReturns.map((r) => r / 100)) *
           Math.sqrt(12) *
           100,
       },
       benchmarkPerformance: {
-        sharpeRatio: calculateSharpeRatio(benchmarkReturns),
-        sortinoRatio: calculateSortinoRatio(benchmarkReturns),
-        cagr: calculateAnnualizedReturn(benchmarkReturns),
-        maxDrawdown: calculateMaxDrawdown(benchmarkCurve.map((e) => e.value)),
+        sharpeRatio: calculateSharpeRatio(safeBenchReturns),
+        sortinoRatio: calculateSortinoRatio(safeBenchReturns),
+        cagr: calculateAnnualizedReturn(safeBenchReturns),
+        maxDrawdown: calculateMaxDrawdown(
+          finalBenchmarkCurve.map((e) => e.value),
+        ),
         volatility:
-          calculateStandardDeviation(benchmarkReturns.map((r) => r / 100)) *
+          calculateStandardDeviation(safeBenchReturns.map((r) => r / 100)) *
           Math.sqrt(12) *
           100,
       },
