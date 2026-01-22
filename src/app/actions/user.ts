@@ -1,6 +1,6 @@
 "use server";
 
-import { db, schema } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { userSignals } from "@/db/schema/tables";
@@ -27,6 +27,11 @@ export interface UserPreferenceConfig {
     concentration: number;
     rebalanceFrequency: "Monthly" | "Yearly";
   };
+  notifications: {
+    enabled: boolean;
+    thresholdType: "HARD_CROSS" | "BUFFER";
+    bufferPercent?: number; // e.g. 5 for 5%
+  };
 }
 
 // Official Ivy Portfolio from Advisor Perspectives
@@ -48,6 +53,11 @@ const DEFAULT_CONFIG: UserPreferenceConfig = {
     maLength: 10,
     concentration: 5,
     rebalanceFrequency: "Monthly",
+  },
+  notifications: {
+    enabled: false,
+    thresholdType: "HARD_CROSS",
+    bufferPercent: 2,
   },
 };
 
@@ -77,6 +87,11 @@ export async function getUserPreferences(): Promise<UserPreferenceConfig> {
           maLength: rawConfig.maLength || 10,
           concentration: rawConfig.concentration || 5,
           rebalanceFrequency: rawConfig.rebalanceFrequency || "Monthly",
+        },
+        notifications: rawConfig.notifications || {
+          enabled: false,
+          thresholdType: "HARD_CROSS",
+          bufferPercent: 2,
         },
       };
     }

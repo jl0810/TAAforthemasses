@@ -8,6 +8,7 @@ import {
 } from "@/app/actions/user";
 import { Loader2, Save, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Props {
   initialConfig: UserPreferenceConfig;
@@ -241,6 +242,163 @@ export function ProfileSettings({ initialConfig, availableETFs }: Props) {
             }
           />
         </div>
+      </div>
+
+      {/* Notification Settings */}
+      <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 bg-emerald-500/[0.02]">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-black font-outfit text-white tracking-tighter mb-2">
+              Nightly Notifications
+            </h2>
+            <p className="text-white/40 text-sm">
+              Receive email alerts when assets cross trendlines or enter your
+              safety buffer.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 bg-white/5 p-1 rounded-full border border-white/5">
+            <button
+              type="button"
+              onClick={() =>
+                setConfig({
+                  ...config,
+                  notifications: {
+                    ...config.notifications,
+                    enabled: false,
+                  },
+                })
+              }
+              className={cn(
+                "px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all",
+                !config.notifications?.enabled
+                  ? "bg-white text-black shadow-lg"
+                  : "text-white/40 hover:text-white",
+              )}
+            >
+              Off
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setConfig({
+                  ...config,
+                  notifications: {
+                    ...config.notifications,
+                    enabled: true,
+                  },
+                })
+              }
+              className={cn(
+                "px-6 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all",
+                config.notifications?.enabled
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                  : "text-white/40 hover:text-white",
+              )}
+            >
+              Active
+            </button>
+          </div>
+        </div>
+
+        {config.notifications?.enabled && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="space-y-4">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+                Trigger Logic
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig({
+                      ...config,
+                      notifications: {
+                        ...config.notifications!,
+                        thresholdType: "HARD_CROSS",
+                      },
+                    })
+                  }
+                  className={cn(
+                    "flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all gap-2",
+                    config.notifications.thresholdType === "HARD_CROSS"
+                      ? "border-emerald-500 bg-emerald-500/10"
+                      : "border-white/5 bg-white/5 hover:border-white/10",
+                  )}
+                >
+                  <span className="text-lg font-black text-white">
+                    Hard Cross
+                  </span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest text-center">
+                    Only on Signal Flip
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig({
+                      ...config,
+                      notifications: {
+                        ...config.notifications!,
+                        thresholdType: "BUFFER",
+                      },
+                    })
+                  }
+                  className={cn(
+                    "flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all gap-2",
+                    config.notifications.thresholdType === "BUFFER"
+                      ? "border-indigo-500 bg-indigo-500/10"
+                      : "border-white/5 bg-white/5 hover:border-white/10",
+                  )}
+                >
+                  <span className="text-lg font-black text-white">
+                    &quot;Close Call&quot;
+                  </span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest text-center">
+                    Within Safety Buffer
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {config.notifications.thresholdType === "BUFFER" && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <label className="text-xs font-bold text-white/40 uppercase tracking-widest pl-1">
+                    Safety Buffer Threshold
+                  </label>
+                  <span className="text-2xl font-black text-indigo-400 font-mono">
+                    {config.notifications.bufferPercent}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value={config.notifications.bufferPercent || 2}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      notifications: {
+                        ...config.notifications!,
+                        bufferPercent: parseFloat(e.target.value),
+                      },
+                    })
+                  }
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                />
+                <p className="text-xs text-white/40">
+                  You will be notified if the price gets within{" "}
+                  <strong className="text-white">
+                    {config.notifications.bufferPercent}%
+                  </strong>{" "}
+                  of the trend line.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Global Research Settings */}
