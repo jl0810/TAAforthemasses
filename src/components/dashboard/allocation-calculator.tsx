@@ -341,7 +341,7 @@ export function AllocationCalculator({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.03]">
+            <tbody className="">
               {ledger.map((trade, idx) => (
                 <React.Fragment
                   key={`${trade.dateLabel}-${trade.ticker}-${idx}`}
@@ -400,7 +400,7 @@ export function AllocationCalculator({
                     </td>
                   </tr>
                   {/* Math Trace Row (Expandable or always visible for audit?) - Kept subtle */}
-                  <tr className="bg-white/[0.02]">
+                  <tr className="bg-white/[0.02] border-b border-white/[0.05]">
                     <td colSpan={7} className="px-8 py-4">
                       <div className="flex flex-wrap gap-y-3 gap-x-12 items-center">
                         <div className="flex items-center gap-3">
