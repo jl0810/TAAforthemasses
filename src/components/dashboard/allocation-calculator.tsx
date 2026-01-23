@@ -8,6 +8,7 @@ import {
   FileText,
   Info,
   ArrowRightLeft,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MarketSignal } from "@/app/actions/market";
@@ -30,6 +31,7 @@ export function AllocationCalculator({
   concentration?: number;
 }) {
   const [allocation, setAllocation] = useState(100000);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Filter history based on strategy start date and zip signals together
   const ledger = React.useMemo(() => {
@@ -183,26 +185,33 @@ export function AllocationCalculator({
       });
     }
 
-    return allTrades;
+    const fullLedger = allTrades;
+
+    if (!searchTerm) return fullLedger;
+    return fullLedger.filter(
+      (t) =>
+        t.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    );
   }, [
     signals,
     allocation,
     strategyStartDate,
     rebalanceFrequency,
     concentration,
+    searchTerm,
   ]);
 
-  const totalInvested = ledger
-    .filter(
-      (t) =>
-        t.dateLabel ===
-          signals[0]?.history[signals[0].history.length - 1]?.month &&
-        (t.side === "BUY" || t.side === "HOLD"),
-    )
-    .reduce((acc, t) => acc + t.notional, 0);
-
+  // Always calculate totals from the full unfiltered history to keep metrics accurate
+  const totalInvested = React.useMemo(() => {
+    // We need the full list of current month's active holdings
+    const latestMonth =
+      signals[0]?.history[signals[0].history.length - 1]?.month;
+    return signals
+      .filter((s) => s.isTopN && s.status === "Risk-On")
+      .reduce((acc) => acc + allocation / concentration, 0);
+  }, [signals, allocation, concentration]);
   // Calculate cash based on what ISN'T allocated
-  // Ideally this equals allocation - totalInvested
   const totalInCash = allocation - totalInvested;
 
   return (
@@ -223,32 +232,39 @@ export function AllocationCalculator({
               $
             </div>
             <input
-              type="number"
-              value={allocation}
-              onChange={(e) => setAllocation(Number(e.target.value))}
+              type="text"
+              value={allocation.toLocaleString()}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, "");
+                if (val === "") {
+                  setAllocation(0);
+                } else {
+                  setAllocation(Math.min(Number(val), 1000000000)); // Cap at 1B for safety
+                }
+              }}
               className="w-full bg-black/40 border-2 border-white/5 hover:border-white/10 focus:border-emerald-500/50 transition-all rounded-[1.5rem] py-8 pl-14 pr-8 text-5xl font-black font-outfit text-white focus:outline-none placeholder:text-white/10"
-              placeholder="0.00"
+              placeholder="0"
             />
           </div>
         </div>
 
         <div className="flex gap-4 w-full md:w-auto">
-          <div className="glass-card px-8 py-6 rounded-[2rem] bg-emerald-500/5 border-emerald-500/10 flex flex-col justify-center min-w-[180px]">
-            <div className="text-[10px] font-black text-emerald-500/50 uppercase tracking-widest mb-1">
+          <div className="glass-card px-8 py-6 rounded-[2rem] bg-emerald-500/5 border-emerald-500/10 flex flex-col justify-center min-w-[200px]">
+            <div className="text-[11px] font-black text-emerald-500/60 uppercase tracking-[0.2em] mb-2">
               risk-on allocation
             </div>
-            <div className="text-2xl font-black text-emerald-400 font-mono">
+            <div className="text-3xl font-black text-emerald-400 font-mono">
               $
               {totalInvested.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
               })}
             </div>
           </div>
-          <div className="glass-card px-8 py-6 rounded-[2rem] bg-indigo-500/5 border-indigo-500/10 flex flex-col justify-center min-w-[180px]">
-            <div className="text-[10px] font-black text-indigo-500/50 uppercase tracking-widest mb-1">
+          <div className="glass-card px-8 py-6 rounded-[2rem] bg-indigo-500/5 border-indigo-500/10 flex flex-col justify-center min-w-[200px]">
+            <div className="text-[11px] font-black text-indigo-500/60 uppercase tracking-[0.2em] mb-2">
               risk-off cash
             </div>
-            <div className="text-2xl font-black text-indigo-400 font-mono">
+            <div className="text-3xl font-black text-indigo-400 font-mono">
               $
               {totalInCash.toLocaleString(undefined, {
                 maximumFractionDigits: 0,
@@ -260,25 +276,39 @@ export function AllocationCalculator({
 
       {/* Institutional Blotter */}
       <div className="glass-card rounded-[2.5rem] overflow-hidden border-white/5 bg-black/20 backdrop-blur-xl">
-        <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/5 text-white/60">
-              <Calculator size={20} />
+        <div className="p-8 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/[0.01]">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 rounded-2xl bg-white/5 text-white/60 border border-white/10">
+              <Calculator size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white tracking-tight">
-                Institutional Trade Blotter
+              <h2 className="text-xl font-black text-white tracking-tight leading-none mb-1">
+                Personal Portfolio Blotter
               </h2>
-              <p className="text-xs text-white/30 font-medium">
-                Generated based on Top {concentration} Momentum Rank
+              <p className="text-[11px] text-white/30 font-bold uppercase tracking-wider">
+                Target: Top {concentration} Momentum
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+
+          <div className="flex items-center gap-4 flex-1 max-w-md">
+            <div className="relative w-full group">
+              <Search
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-indigo-400 transition-colors"
+              />
+              <input
+                type="text"
+                placeholder="Search ticker..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-black/40 border border-white/5 hover:border-white/10 focus:border-indigo-500/30 rounded-xl py-2.5 pl-11 pr-4 text-sm text-white focus:outline-none transition-all placeholder:text-white/10 font-medium"
+              />
+            </div>
+            <div className="hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 whitespace-nowrap">
               <ArrowRightLeft size={14} className="text-indigo-400" />
-              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest">
-                {rebalanceFrequency} Rebalance
+              <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.15em]">
+                {rebalanceFrequency}
               </span>
             </div>
           </div>
@@ -287,120 +317,111 @@ export function AllocationCalculator({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest">
-                  Date
+              <tr className="border-b border-white/5 bg-white/[0.01]">
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em]">
+                  Time
                 </th>
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest">
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em]">
+                  Symbol
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em] text-center">
                   Side
                 </th>
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest">
-                  Asset
-                </th>
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest text-right">
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em] text-right">
                   Qty
                 </th>
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest text-right">
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em] text-right">
                   Price
                 </th>
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest text-right">
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em] text-right">
                   Notional
                 </th>
-                <th className="px-6 py-4 text-[9px] font-black text-white/30 uppercase tracking-widest">
-                  Rationale
+                <th className="px-6 py-5 text-[10px] font-black text-white/40 uppercase tracking-[0.25em] text-center">
+                  Action
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-white/[0.03]">
               {ledger.map((trade, idx) => (
                 <React.Fragment
                   key={`${trade.dateLabel}-${trade.ticker}-${idx}`}
                 >
-                  <tr className="group hover:bg-white/[0.03] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="text-xs font-mono text-white/60">
+                  <tr className="group hover:bg-white/[0.02] transition-colors">
+                    <td className="px-6 py-6">
+                      <div className="text-xs font-mono text-white/40 group-hover:text-white/60 transition-colors">
                         {trade.dateLabel}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-6 font-black text-base text-white tracking-tight">
+                      {trade.ticker}
+                    </td>
+                    <td className="px-6 py-6 text-center">
                       <span
                         className={cn(
-                          "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded",
-                          trade.side === "BUY" && "bg-emerald-500 text-black",
-                          trade.side === "SELL" && "bg-rose-500 text-white",
-                          trade.side === "HOLD" && "bg-white/10 text-white/50",
+                          "inline-block px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] border transition-all shadow-sm",
+                          trade.side === "BUY"
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/5 group-hover:bg-emerald-500/20"
+                            : "bg-rose-500/10 text-rose-400 border-rose-500/20 shadow-rose-500/5 group-hover:bg-rose-500/20",
                         )}
                       >
                         {trade.side}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="font-black text-xs text-white">
-                          {trade.ticker}
-                        </div>
-                        <div className="text-[10px] text-white/30 truncate max-w-[100px]">
-                          {trade.name}
-                        </div>
+                    <td className="px-6 py-6 text-right">
+                      <div className="font-mono text-sm text-white/80 tabular-nums">
+                        {trade.qty.toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="font-mono text-xs text-white/70">
-                        {trade.qty.toFixed(2)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="font-mono text-xs text-white/70">
-                        ${trade.price.toFixed(2)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div
-                        className={cn(
-                          "font-mono text-xs font-bold",
-                          trade.side === "SELL"
-                            ? "text-rose-400"
-                            : "text-emerald-400",
-                        )}
-                      >
+                    <td className="px-6 py-6 text-right">
+                      <div className="font-mono text-sm text-white/80 tabular-nums">
                         $
-                        {trade.notional.toLocaleString(undefined, {
+                        {trade.price.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                         })}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-[10px] font-medium text-white/40 italic">
-                        {trade.rationale}
+                    <td className="px-6 py-6 text-right">
+                      <div className="font-mono text-sm font-black text-white tabular-nums tracking-tighter">
+                        $
+                        {trade.notional.toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <div className="flex justify-center gap-2">
+                        {/* Subtle Action placeholders or mini-indicators */}
+                        <div className="w-2 h-2 rounded-full bg-white/10 group-hover:bg-indigo-500/40 transition-colors" />
                       </div>
                     </td>
                   </tr>
                   {/* Math Trace Row (Expandable or always visible for audit?) - Kept subtle */}
-                  <tr className="bg-black/20">
-                    <td
-                      colSpan={7}
-                      className="px-6 py-2 border-b border-white/[0.03]"
-                    >
-                      <div className="flex gap-6 items-center opacity-50 hover:opacity-100 transition-opacity">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-white/20 uppercase">
-                            Trend Math:
+                  <tr className="bg-white/[0.02]">
+                    <td colSpan={7} className="px-8 py-4">
+                      <div className="flex flex-wrap gap-y-3 gap-x-12 items-center">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">
+                            Logic Origin:
                           </span>
-                          <span className="text-[10px] font-mono text-white/60">
-                            MA: ${trade.trend.toFixed(2)}
+                          <span className="text-[10px] font-bold text-white/50 uppercase tracking-tight">
+                            {trade.rationale}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-white/20 uppercase">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">
                             Safety Buffer:
                           </span>
                           <span
                             className={cn(
-                              "text-[10px] font-mono",
+                              "text-xs font-mono font-black",
                               calculateSafetyBuffer(trade.price, trade.trend) >
                                 0
-                                ? "text-emerald-500"
-                                : "text-rose-500",
+                                ? "text-emerald-500/60"
+                                : "text-rose-500/60",
                             )}
                           >
                             {calculateSafetyBuffer(
@@ -425,7 +446,7 @@ export function AllocationCalculator({
             <div className="flex items-center gap-2">
               <Info size={12} />
               <p className="text-[10px] font-medium uppercase tracking-tighter">
-                Institutional Audit Trace
+                Portfolio Audit Trace
               </p>
             </div>
             <p className="text-[9px] font-medium leading-tight max-w-sm">
