@@ -1,14 +1,12 @@
 import {
   renderWelcomeEmail,
-  renderMagicLinkEmail,
   sendEmail as centralSendEmail,
   getBranding,
+  renderDisclosure,
 } from "@jl0810/messaging";
 
 // Get centralized TAA Branding
 const branding = getBranding("taa");
-
-// Removed static variable to ensure runtime env access
 
 export interface EmailConfig {
   to: string;
@@ -30,19 +28,21 @@ export class EmailService {
   static async sendWelcomeEmail(
     email: string,
     userName: string,
-  ): Promise<EmailConfig> {
+  ): Promise<boolean> {
     const dashboardUrl = `${this.baseUrl}/`;
+
+    // The central renderWelcomeEmail now includes the disclosure via branding
     const html = await renderWelcomeEmail({
       branding,
       userName,
       dashboardUrl,
     });
 
-    return {
+    return await sendEmail({
       to: email,
       subject: `Welcome to ${branding.appName}, ${userName}! 🚀`,
       html,
-    };
+    });
   }
 }
 
@@ -57,13 +57,19 @@ export async function sendEmail(config: EmailConfig): Promise<boolean> {
       return false;
     }
 
+    // append disclosure for manual HTML if it's not already there (safety check)
+    let finalHtml = config.html;
+    if (!finalHtml.includes("NOT FINANCIAL ADVICE")) {
+      finalHtml = `${finalHtml}${renderDisclosure(branding)}`;
+    }
+
     const result = await centralSendEmail({
       to: config.to,
       from:
         process.env.EMAIL_FROM ||
         branding.supportEmail.replace("support@", "noreply@"),
       subject: config.subject,
-      html: config.html,
+      html: finalHtml,
       apiKey: apiKey,
       apiUrl:
         process.env.USESEND_API_URL ||
