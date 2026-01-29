@@ -19,6 +19,8 @@ RUN npm uninstall @jl0810/auth @jl0810/db-client @jl0810/messaging && \
 # BUILDER
 FROM base AS builder
 ARG GITHUB_TOKEN
+ARG NEXT_PUBLIC_SWETRIX_PROJECT_ID
+ARG NEXT_PUBLIC_SWETRIX_API_URL
 
 # Sanity check: Fail build if token is missing
 RUN if [ -z "$GITHUB_TOKEN" ]; then \
@@ -55,6 +57,10 @@ ENV NODE_ENV=production
 ENV SKIP_ENV_VALIDATION=1
 # Dummy DB URL to allow build to pass without real DB connection
 ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres"
+
+# Inject Swetrix build args into environment for Next.js build
+ENV NEXT_PUBLIC_SWETRIX_PROJECT_ID=$NEXT_PUBLIC_SWETRIX_PROJECT_ID
+ENV NEXT_PUBLIC_SWETRIX_API_URL=$NEXT_PUBLIC_SWETRIX_API_URL
 
 # Run the build
 RUN npm run build
