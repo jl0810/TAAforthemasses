@@ -16,6 +16,9 @@
 
   --border-glass: rgba(255, 255, 255, 0.1);
   --border-glass-bright: rgba(255, 255, 255, 0.2);
+
+  --header-bg: rgba(15, 23, 42, 0.7);
+  --header-border: rgba(255, 255, 255, 0.08);
 }
 
 :root {
@@ -195,6 +198,7 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

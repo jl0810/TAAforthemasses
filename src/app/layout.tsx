@@ -4,6 +4,7 @@ import "./globals.css";
 import { NavDock } from "@/components/layout/nav-dock";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { SwetrixProvider } from "@/app/providers/swetrix-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -34,12 +35,23 @@ export default function RootLayout({
           <div className="absolute bottom-[10%] right-[-5%] w-[35%] h-[35%] rounded-full bg-emerald-500/10 blur-[100px]" />
         </div>
 
+        {/* Transition Bridge: Smooth Header-to-Body Environmental Blend */}
+        <div className="fixed top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#0f172a] via-[#0f172a]/40 to-transparent pointer-events-none -z-10" />
+
         <Header />
 
         <main className="max-w-7xl mx-auto px-4 pt-24 pb-8">{children}</main>
 
         <Footer />
         <NavDock />
+        <SwetrixProvider />
+        <noscript>
+          <img
+            src="https://analytics-api.raydoug.com/backend/v1/log/noscript?pid=YMC1RxkwmxWN"
+            alt=""
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </noscript>
       </body>
     </html>
   );

@@ -1,0 +1,94 @@
+services:
+  # ---------------------------------------------------------------------------
+  # 1. Swetrix API (Backend)
+  # ---------------------------------------------------------------------------
+  swetrix-api:
+    image: swetrix/swetrix-api:latest
+    container_name: swetrix-api
+    restart: unless-stopped
+    depends_on:
+      - clickhouse
+      - redis
+    environment:
+      # --- DATABASE CONFIG ---
+      - DB_HOST=clickhouse
+      - DB_PORT=8123
+      - DB_USER=default
+      - DB_PASSWORD=default
+      - DB_NAME=default
+      
+      # --- REDIS CONFIG ---
+      # OPTION A: Use Self-Contained Redis (Default)
+      - REDIS_URL=redis://redis:6379
+      
+      # OPTION B: Use Shared Redis (Uncomment & Configure to save RAM)
+      # - REDIS_URL=redis://:<REDIS_PASSWORD>@<SHARED_REDIS_HOST>:6379
+      
+      # --- APP CONFIG ---
+      - PORT=8080
+      - LOG_LEVEL=info
+      # Generate a random 64-char string: `openssl rand -hex 32`
+      - SECRET_KEY_BASE=1afc0b6ef2c1efb382c824d524527fe9176c3fe4976fb2586d1e3eaf40c1466d
+      
+    expose:
+      - "8080"
+    networks:
+      - swetrix-network
+
+  # ---------------------------------------------------------------------------
+  # 2. Swetrix Frontend (UI)
+  # ---------------------------------------------------------------------------
+  swetrix-fe:
+    image: swetrix/swetrix-fe:latest
+    container_name: swetrix-fe
+    restart: unless-stopped
+    environment:
+      # PUBLIC URL of your API (Must be HTTPS in production)
+      - API_URL=https://api.analytics.raydoug.com
+    expose:
+      - "80"
+    networks:
+      - swetrix-network
+
+  # ---------------------------------------------------------------------------
+  # 3. ClickHouse (Analytics DB)
+  # ---------------------------------------------------------------------------
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: swetrix-clickhouse
+    restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    expose:
+      - "8123"
+      - "9000"
+    networks:
+      - swetrix-network
+
+  # ---------------------------------------------------------------------------
+  # 4. Redis (Cache) - Optional if using Shared Redis
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: swetrix-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    networks:
+      - swetrix-network
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
+  redis_data:
+
+networks:
+  swetrix-network:
+    driver: bridge
