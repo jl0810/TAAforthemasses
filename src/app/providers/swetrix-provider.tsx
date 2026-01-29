@@ -19,6 +19,9 @@ function SwetrixInner() {
       swetrix.init(process.env.NEXT_PUBLIC_SWETRIX_PROJECT_ID, {
         apiURL: process.env.NEXT_PUBLIC_SWETRIX_API_URL,
       });
+
+      // Enable automatic error tracking
+      swetrix.trackErrors();
     }
   }, []);
 
