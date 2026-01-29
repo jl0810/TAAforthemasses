@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import * as swetrix from "swetrix";
 
-export function SwetrixProvider() {
+function SwetrixInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -29,7 +30,15 @@ export function SwetrixProvider() {
     ) {
       swetrix.trackViews();
     }
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   return null;
+}
+
+export function SwetrixProvider() {
+  return (
+    <Suspense fallback={null}>
+      <SwetrixInner />
+    </Suspense>
+  );
 }
