@@ -47,7 +47,7 @@ export default function RootLayout({
         <SwetrixProvider />
         <noscript>
           <img
-            src="https://analytics-api.raydoug.com/backend/v1/log/noscript?pid=YMC1RxkwmxWN"
+            src="https://analytics-api.raydoug.com/backend/log/noscript?pid=YMC1RxkwmxWN"
             alt=""
             referrerPolicy="no-referrer-when-downgrade"
           />
