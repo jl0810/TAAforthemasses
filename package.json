@@ -14,7 +14,8 @@
     "test": "jest",
     "env:push": "tsx ../platform/scripts/push-env.ts",
     "script:update-prices": "tsx scripts/update-prices.ts",
-    "script:notify": "tsx scripts/check-notifications.ts"
+    "script:notify": "tsx scripts/check-notifications.ts",
+    "report:analytics": "tsx scripts/generate-analytics-summary.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
